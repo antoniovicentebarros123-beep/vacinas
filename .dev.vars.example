@@ -1,0 +1,3 @@
+# Copiar para .dev.vars (nunca fazer commit). Em produção usar: wrangler secret put <NOME>
+# Pepper das palavras-passe (Fase 1b). Gerar com: openssl rand -base64 32
+PEPPER=trocar-por-valor-aleatorio

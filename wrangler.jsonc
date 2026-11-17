@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vacinacao-infantil",
+  "main": "src/worker/index.js",
+  // Documentação Cloudflare: definir como a data de hoje.
+  "compatibility_date": "2026-11-16",
+  "assets": {
+    "directory": "./public/",
+    "binding": "ASSETS",
+    // A interface é um conjunto de páginas estáticas; o Worker só corre para a API.
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "vacinacao",
+      // Preencher com o UUID devolvido por: npx wrangler d1 create vacinacao
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "database/migrations"
+    }
+  ]
+  // R2 (backups) e Cron Triggers entram na Fase 7.
+}

@@ -1,0 +1,8 @@
+/* Impressão do cartão de vacinas (Fase 6). Esqueleto: esconde a navegação ao imprimir. */
+@media print {
+  .barra-lateral, .topo, .saltar, .botao, .indicador-sync { display: none !important; }
+  .aplicacao { display: block; }
+  body { background: #fff; color: #000; font-size: 11pt; }
+  .cartao { box-shadow: none; border: 1px solid #999; break-inside: avoid; }
+  a { color: #000; text-decoration: none; }
+}

@@ -1,0 +1,56 @@
+/* Estrutura do sistema depois do login: barra lateral + topo + conteúdo.
+   Sem glassmorphism aqui: legibilidade e desempenho em computadores antigos. */
+.aplicacao { display: grid; grid-template-columns: var(--largura-barra) 1fr; min-height: 100vh; }
+
+.barra-lateral {
+  background: var(--azul-petroleo); color: #fff;
+  display: flex; flex-direction: column; gap: 1.5rem; padding: 1.25rem 0.9rem;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
+.marca { display: flex; align-items: center; gap: 0.75rem; padding: 0 0.5rem; }
+.marca-selo {
+  width: 2.5rem; height: 2.5rem; border-radius: 10px; flex: none;
+  background: linear-gradient(135deg, var(--verde-principal), var(--turquesa));
+  display: grid; place-items: center; color: #fff; font-size: 1.25rem;
+}
+.marca-nome { font-weight: 600; line-height: 1.2; }
+.marca-posto { font-size: var(--t-pequeno); color: #cfe6ec; }
+
+.menu { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
+.menu a, .menu .item-menu {
+  display: flex; align-items: center; gap: 0.75rem; min-height: var(--alvo-toque);
+  padding: 0.5rem 0.75rem; border-radius: var(--raio-pequeno);
+  color: #fff; text-decoration: none; font-weight: 500;
+}
+.menu a:hover { background: rgba(255, 255, 255, 0.12); }
+.menu a[aria-current="page"] { background: #fff; color: var(--azul-petroleo); }
+.menu a:focus-visible { outline-color: #fff; }
+.menu .em-breve { opacity: 0.7; cursor: default; }
+.menu .em-breve small { margin-left: auto; font-size: 0.75rem; }
+
+.coluna-principal { display: flex; flex-direction: column; min-width: 0; }
+.topo {
+  display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+  padding: 0.75rem 1.5rem; background: var(--superficie); border-bottom: 1px solid var(--linha);
+  position: sticky; top: 0; z-index: 10;
+}
+.topo-titulo { margin-right: auto; font-size: var(--t-medio); font-weight: 600; }
+.topo-utilizador { display: flex; align-items: center; gap: 0.5rem; font-size: var(--t-pequeno); }
+.topo-utilizador small { display: block; color: var(--texto-suave); }
+.botao-menu { display: none; }
+
+.conteudo { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; max-width: 80rem; width: 100%; }
+
+/* Tablet e telemóvel: a barra lateral passa a gaveta */
+@media (max-width: 62rem) {
+  .aplicacao { grid-template-columns: 1fr; }
+  .barra-lateral {
+    position: fixed; inset: 0 auto 0 0; width: min(18rem, 85vw); height: 100vh; z-index: 50;
+    transform: translateX(-100%); transition: transform 0.2s ease;
+  }
+  .aplicacao[data-menu="aberto"] .barra-lateral { transform: none; }
+  .aplicacao[data-menu="aberto"]::after { content: ""; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); z-index: 40; }
+  .botao-menu { display: inline-flex; }
+  .topo { padding: 0.6rem 1rem; }
+  .conteudo { padding: 1rem; }
+}

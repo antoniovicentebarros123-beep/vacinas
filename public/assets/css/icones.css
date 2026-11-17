@@ -1,0 +1,26 @@
+/* GERADO a partir de public/assets/icons/*.svg (Lucide, licença ISC). Cor = currentColor. */
+.icone{display:inline-block;flex:none;width:1.25em;height:1.25em;background-color:currentColor;-webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat;vertical-align:-0.2em}
+.icone-user{--ic:url(../icons/user.svg)}
+.icone-lock{--ic:url(../icons/lock.svg)}
+.icone-eye{--ic:url(../icons/eye.svg)}
+.icone-eye-off{--ic:url(../icons/eye-off.svg)}
+.icone-layout-dashboard{--ic:url(../icons/layout-dashboard.svg)}
+.icone-baby{--ic:url(../icons/baby.svg)}
+.icone-syringe{--ic:url(../icons/syringe.svg)}
+.icone-calendar-days{--ic:url(../icons/calendar-days.svg)}
+.icone-package{--ic:url(../icons/package.svg)}
+.icone-chart-column{--ic:url(../icons/chart-column.svg)}
+.icone-phone-call{--ic:url(../icons/phone-call.svg)}
+.icone-settings{--ic:url(../icons/settings.svg)}
+.icone-log-out{--ic:url(../icons/log-out.svg)}
+.icone-wifi-off{--ic:url(../icons/wifi-off.svg)}
+.icone-refresh-cw{--ic:url(../icons/refresh-cw.svg)}
+.icone-circle-check{--ic:url(../icons/circle-check.svg)}
+.icone-triangle-alert{--ic:url(../icons/triangle-alert.svg)}
+.icone-menu{--ic:url(../icons/menu.svg)}
+.icone-x{--ic:url(../icons/x.svg)}
+.icone-users{--ic:url(../icons/users.svg)}
+.icone-file-text{--ic:url(../icons/file-text.svg)}
+.icone-shield-check{--ic:url(../icons/shield-check.svg)}
+.icone-clock{--ic:url(../icons/clock.svg)}
+.icone-cloud-check{--ic:url(../icons/cloud-check.svg)}

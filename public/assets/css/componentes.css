@@ -1,0 +1,50 @@
+/* Botões */
+.botao {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  min-height: var(--alvo-toque); padding: 0.55rem 1.1rem;
+  border: 2px solid transparent; border-radius: var(--raio-pequeno);
+  font-weight: 600; cursor: pointer; text-decoration: none;
+  background: var(--verde-escuro); color: #fff;
+}
+.botao:hover { background: #085a43; }
+.botao[disabled] { opacity: 0.6; cursor: not-allowed; }
+.botao-secundario { background: var(--superficie); color: var(--azul-petroleo); border-color: var(--azul-petroleo); }
+.botao-secundario:hover { background: #e8f3f6; }
+.botao-icone { min-width: var(--alvo-toque); padding: 0.5rem; }
+
+/* Cartões */
+.cartao { background: var(--superficie); border-radius: var(--raio); box-shadow: var(--sombra); padding: 1.25rem; }
+.cartao > h2 { margin-bottom: 0.5rem; }
+
+/* Formulários */
+.campo { display: flex; flex-direction: column; gap: 0.35rem; }
+.campo label { font-weight: 500; }
+.campo input[type="text"], .campo input[type="password"] {
+  min-height: var(--alvo-toque); padding: 0.5rem 0.85rem;
+  border: 2px solid var(--linha); border-radius: var(--raio-pequeno); background: #fff;
+}
+.campo input:focus-visible { border-color: var(--azul-petroleo); outline-offset: 0; }
+.ajuda { color: var(--texto-suave); font-size: var(--t-pequeno); }
+
+/* Mensagens */
+.mensagem { padding: 0.75rem 1rem; border-radius: var(--raio-pequeno); font-size: var(--t-pequeno); }
+.mensagem-erro { background: var(--erro-fundo); color: var(--erro); }
+.mensagem-aviso { background: var(--aviso-fundo); color: var(--aviso); }
+.mensagem-sucesso { background: var(--sucesso-fundo); color: var(--sucesso); }
+
+/* Indicador de sincronização (topo do ecrã) */
+.indicador-sync {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  min-height: 2.25rem; padding: 0.25rem 0.8rem; border-radius: 999px;
+  font-size: var(--t-pequeno); font-weight: 500;
+  background: var(--sucesso-fundo); color: var(--sucesso);
+}
+.indicador-sync[data-estado="pendente"] { background: var(--aviso-fundo); color: var(--aviso); }
+.indicador-sync[data-estado="offline"] { background: #e6ecee; color: #33474c; }
+.indicador-sync[data-estado="espera"] { background: #e8f3f6; color: var(--azul-petroleo); }
+
+/* Tabelas legíveis */
+.tabela { width: 100%; border-collapse: collapse; }
+.tabela th, .tabela td { text-align: left; padding: 0.7rem 0.75rem; border-bottom: 1px solid var(--linha); }
+.tabela th { font-weight: 600; color: var(--texto-suave); font-size: var(--t-pequeno); }
+.tabela tbody tr:hover { background: #f6fbfa; }
