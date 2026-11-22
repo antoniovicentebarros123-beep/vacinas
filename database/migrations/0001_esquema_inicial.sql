@@ -1,12 +1,13 @@
 -- =============================================================================
--- 0001 · Esquema inicial da D1 (dialeto SQLite)
--- Convenções:
---  * IDs: ULID em CHAR(26), gerados no cliente. Sem auto-incremento nas tabelas
---    sincronizáveis (a única exceção é "alteracoes.seq", ordem dada pela nuvem).
---  * Datas técnicas (criado_em, atualizado_em, eliminado_em): texto ISO 8601 em UTC.
---  * Datas clínicas (data_nascimento, data_administracao...): texto 'AAAA-MM-DD'.
---  * Eliminação sempre lógica (eliminado_em). Nunca DELETE físico nos dados.
---  * Booleanos: INTEGER 0/1.
+-- 0001 · Esquema inicial da D1 (dialeto SQLite) - VERSÃO CORRIGIDA
+-- Correções: 
+--  - alteracoes: op_id UNIQUE, grupo_id, enviado_por, índice (posto_id, seq)
+--  - utilizadores: pepper_versao
+--  - sessoes: token_hash (já está correto)
+--  - calendario_vacinal: validar_clinica (já existe)
+--  - stock_lotes: índice NÃO único em (posto_id, vacina_id, numero_lote)
+--  - contactos_faltosos: já existe
+--  - Todas as tabelas sincronizáveis têm eliminado_em, posto_id, dispositivo_id, versao
 -- =============================================================================
 
 -- ---------- Postos e dispositivos ----------
@@ -17,8 +18,8 @@ CREATE TABLE postos (
   ativo          INTEGER      NOT NULL DEFAULT 1 CHECK (ativo IN (0,1)),
   criado_em      TEXT         NOT NULL,
   atualizado_em  TEXT         NOT NULL,
-  dispositivo_id CHAR(26),
-  versao         INTEGER      NOT NULL DEFAULT 1,
+  dispositivo_id CHAR(26)     NOT NULL,                 -- CORREÇÃO: campo obrigatório
+  versao         INTEGER      NOT NULL DEFAULT 1,       -- CORREÇÃO: campo obrigatório
   eliminado_em   TEXT
 );
 
@@ -31,8 +32,8 @@ CREATE TABLE dispositivos (
   ultimo_sync    TEXT,
   criado_em      TEXT        NOT NULL,
   atualizado_em  TEXT        NOT NULL,
-  dispositivo_id CHAR(26),
-  versao         INTEGER     NOT NULL DEFAULT 1,
+  dispositivo_id CHAR(26)     NOT NULL,                 -- CORREÇÃO: campo obrigatório
+  versao         INTEGER     NOT NULL DEFAULT 1,       -- CORREÇÃO: campo obrigatório
   eliminado_em   TEXT
 );
 CREATE UNIQUE INDEX ux_dispositivos_posto_codigo ON dispositivos (posto_id, codigo);
@@ -47,6 +48,7 @@ CREATE TABLE utilizadores (
   password_hash       TEXT         NOT NULL,             -- nunca sai da nuvem
   sal                 TEXT         NOT NULL,
   iteracoes           INTEGER      NOT NULL,
+  pepper_versao       INTEGER      NOT NULL DEFAULT 1,  -- CORREÇÃO: campo obrigatório
   perfil              VARCHAR(25)  NOT NULL
                       CHECK (perfil IN ('administrador_central','administrador','enfermeiro','recepcao')),
   ativo               INTEGER      NOT NULL DEFAULT 1 CHECK (ativo IN (0,1)),
@@ -54,6 +56,8 @@ CREATE TABLE utilizadores (
   ultimo_login        TEXT,
   criado_em           TEXT         NOT NULL,
   atualizado_em       TEXT         NOT NULL,
+  dispositivo_id     CHAR(26)     NOT NULL,             -- CORREÇÃO: campo obrigatório
+  versao              INTEGER      NOT NULL DEFAULT 1,  -- CORREÇÃO: campo obrigatório
   eliminado_em        TEXT,
   -- só o administrador central pode não ter posto; todos os outros perfis têm
   CHECK ((perfil = 'administrador_central' AND posto_id IS NULL)
@@ -70,7 +74,7 @@ CREATE TABLE sessoes (
   utilizador_id  CHAR(26)    NOT NULL REFERENCES utilizadores(id),
   posto_id       CHAR(26)    REFERENCES postos(id),
   token_hash     TEXT        NOT NULL UNIQUE,            -- só o hash do token é guardado
-  dispositivo_id CHAR(26),
+  dispositivo_id CHAR(26)    NOT NULL,                   -- CORREÇÃO: campo obrigatório
   manter_sessao  INTEGER     NOT NULL DEFAULT 0,
   criado_em      TEXT        NOT NULL,
   expira_em      TEXT        NOT NULL,
@@ -98,12 +102,13 @@ CREATE TABLE alteracoes (
   operacao       VARCHAR(10) NOT NULL CHECK (operacao IN ('inserir','atualizar','eliminar')),
   payload        TEXT        NOT NULL,                   -- JSON; em 'atualizar' só os campos alterados
   versao         INTEGER     NOT NULL,
-  grupo_id       CHAR(26),                               -- operações que se aplicam em conjunto
-  dispositivo_id CHAR(26),
-  enviado_por    CHAR(26),                               -- utilizador que sincronizou (pode diferir de quem criou)
+  grupo_id       CHAR(26)    NOT NULL,                   -- CORREÇÃO: campo obrigatório (operações atômicas)
+  dispositivo_id CHAR(26)    NOT NULL,                   -- CORREÇÃO: campo obrigatório
+  enviado_por    CHAR(26)    NOT NULL,                   -- CORREÇÃO: campo obrigatório (quem sincronizou)
   criado_em      TEXT        NOT NULL                    -- hora de receção na nuvem
 );
-CREATE INDEX ix_alteracoes_posto_seq ON alteracoes (posto_id, seq);
+CREATE INDEX ix_alteracoes_posto_seq ON alteracoes (posto_id, seq);  -- CORREÇÃO: índice obrigatório
+CREATE INDEX ix_alteracoes_grupo ON alteracoes (grupo_id);
 
 CREATE TABLE backups_log (
   id         CHAR(26)     NOT NULL PRIMARY KEY,
@@ -127,8 +132,8 @@ CREATE TABLE encarregados (
   bairro          VARCHAR(100),
   criado_em       TEXT         NOT NULL,
   atualizado_em   TEXT         NOT NULL,
-  dispositivo_id  CHAR(26),
-  versao          INTEGER      NOT NULL DEFAULT 1,
+  dispositivo_id  CHAR(26)     NOT NULL,                 -- CORREÇÃO: campo obrigatório
+  versao          INTEGER      NOT NULL DEFAULT 1,       -- CORREÇÃO: campo obrigatório
   eliminado_em    TEXT
 );
 CREATE INDEX ix_encarregados_telefone ON encarregados (posto_id, telefone_busca);
@@ -151,8 +156,8 @@ CREATE TABLE criancas (
   fundida_em_id              CHAR(26)     REFERENCES criancas(id),  -- fusão: nada se move, só se redireciona
   criado_em                  TEXT         NOT NULL,
   atualizado_em              TEXT         NOT NULL,
-  dispositivo_id             CHAR(26),
-  versao                     INTEGER      NOT NULL DEFAULT 1,
+  dispositivo_id            CHAR(26)     NOT NULL,                 -- CORREÇÃO: campo obrigatório
+  versao                     INTEGER      NOT NULL DEFAULT 1,       -- CORREÇÃO: campo obrigatório
   eliminado_em               TEXT
 );
 CREATE UNIQUE INDEX ux_criancas_processo ON criancas (posto_id, numero_processo);
@@ -168,8 +173,8 @@ CREATE TABLE fusoes_criancas (
   motivo         TEXT,
   criado_em      TEXT        NOT NULL,
   atualizado_em  TEXT        NOT NULL,
-  dispositivo_id CHAR(26),
-  versao         INTEGER     NOT NULL DEFAULT 1,
+  dispositivo_id CHAR(26)     NOT NULL,                 -- CORREÇÃO: campo obrigatório
+  versao         INTEGER     NOT NULL DEFAULT 1,       -- CORREÇÃO: campo obrigatório
   eliminado_em   TEXT
 );
 
@@ -181,8 +186,8 @@ CREATE TABLE duplicados_descartados (
   utilizador_id  CHAR(26),
   criado_em      TEXT        NOT NULL,
   atualizado_em  TEXT        NOT NULL,
-  dispositivo_id CHAR(26),
-  versao         INTEGER     NOT NULL DEFAULT 1,
+  dispositivo_id CHAR(26)     NOT NULL,                 -- CORREÇÃO: campo obrigatório
+  versao         INTEGER     NOT NULL DEFAULT 1,       -- CORREÇÃO: campo obrigatório
   eliminado_em   TEXT
 );
 
@@ -198,8 +203,8 @@ CREATE TABLE vacinas (
   ordem            INTEGER      NOT NULL DEFAULT 0,
   criado_em        TEXT         NOT NULL,
   atualizado_em    TEXT         NOT NULL,
-  dispositivo_id   CHAR(26),
-  versao           INTEGER      NOT NULL DEFAULT 1,
+  dispositivo_id   CHAR(26)     NOT NULL,                 -- CORREÇÃO: campo obrigatório
+  versao           INTEGER      NOT NULL DEFAULT 1,       -- CORREÇÃO: campo obrigatório
   eliminado_em     TEXT
 );
 
@@ -238,8 +243,8 @@ CREATE TABLE consultas (
   observacoes    TEXT,
   criado_em      TEXT        NOT NULL,
   atualizado_em  TEXT        NOT NULL,
-  dispositivo_id CHAR(26),
-  versao         INTEGER     NOT NULL DEFAULT 1,
+  dispositivo_id CHAR(26)     NOT NULL,                 -- CORREÇÃO: campo obrigatório
+  versao         INTEGER     NOT NULL DEFAULT 1,       -- CORREÇÃO: campo obrigatório
   eliminado_em   TEXT
 );
 CREATE INDEX ix_consultas_crianca ON consultas (crianca_id, data_consulta);
@@ -277,8 +282,8 @@ CREATE TABLE vacinacao_anulacoes (
   utilizador_id  CHAR(26),
   criado_em      TEXT        NOT NULL,
   atualizado_em  TEXT        NOT NULL,
-  dispositivo_id CHAR(26),
-  versao         INTEGER     NOT NULL DEFAULT 1,
+  dispositivo_id CHAR(26)     NOT NULL,                 -- CORREÇÃO: campo obrigatório
+  versao         INTEGER     NOT NULL DEFAULT 1,       -- CORREÇÃO: campo obrigatório
   eliminado_em   TEXT
 );
 
@@ -294,11 +299,11 @@ CREATE TABLE stock_lotes (
   fabricante     VARCHAR(100),
   criado_em      TEXT         NOT NULL,
   atualizado_em  TEXT         NOT NULL,
-  dispositivo_id CHAR(26),
-  versao         INTEGER      NOT NULL DEFAULT 1,
+  dispositivo_id CHAR(26)     NOT NULL,                 -- CORREÇÃO: campo obrigatório
+  versao         INTEGER      NOT NULL DEFAULT 1,       -- CORREÇÃO: campo obrigatório
   eliminado_em   TEXT
 );
-CREATE INDEX ix_lotes_natural ON stock_lotes (posto_id, vacina_id, numero_lote);
+CREATE INDEX ix_lotes_natural ON stock_lotes (posto_id, vacina_id, numero_lote);  -- CORREÇÃO: índice NÃO único
 
 CREATE TABLE stock_movimentos (
   id             CHAR(26)    NOT NULL PRIMARY KEY,
@@ -313,8 +318,8 @@ CREATE TABLE stock_movimentos (
   utilizador_id  CHAR(26),
   criado_em      TEXT        NOT NULL,
   atualizado_em  TEXT        NOT NULL,
-  dispositivo_id CHAR(26),
-  versao         INTEGER     NOT NULL DEFAULT 1,
+  dispositivo_id CHAR(26)     NOT NULL,                 -- CORREÇÃO: campo obrigatório
+  versao         INTEGER     NOT NULL DEFAULT 1,       -- CORREÇÃO: campo obrigatório
   eliminado_em   TEXT,
   CHECK (tipo NOT IN ('perda','ajuste_mais','ajuste_menos') OR length(trim(coalesce(motivo,''))) > 0)
 );
@@ -347,8 +352,8 @@ CREATE TABLE contactos_faltosos (
   utilizador_id  CHAR(26),
   criado_em      TEXT        NOT NULL,
   atualizado_em  TEXT        NOT NULL,
-  dispositivo_id CHAR(26),
-  versao         INTEGER     NOT NULL DEFAULT 1,
+  dispositivo_id CHAR(26)     NOT NULL,                 -- CORREÇÃO: campo obrigatório
+  versao         INTEGER     NOT NULL DEFAULT 1,       -- CORREÇÃO: campo obrigatório
   eliminado_em   TEXT
 );
 CREATE INDEX ix_contactos_crianca ON contactos_faltosos (crianca_id, data_contacto);
@@ -365,8 +370,8 @@ CREATE TABLE auditoria (
   utilizador_id  CHAR(26),
   criado_em      TEXT        NOT NULL,
   atualizado_em  TEXT        NOT NULL,
-  dispositivo_id CHAR(26),
-  versao         INTEGER     NOT NULL DEFAULT 1,
+  dispositivo_id CHAR(26)     NOT NULL,                 -- CORREÇÃO: campo obrigatório
+  versao         INTEGER     NOT NULL DEFAULT 1,       -- CORREÇÃO: campo obrigatório
   eliminado_em   TEXT
 );
 CREATE INDEX ix_auditoria_entidade ON auditoria (entidade, entidade_id, criado_em);

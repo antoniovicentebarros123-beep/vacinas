@@ -54,7 +54,7 @@ test('só o administrador central pode ficar sem posto', () => {
   const db = bdNova();
   db.exec(gerarSql());
   const ins = (perfil, posto) => db.prepare(
-    "INSERT INTO utilizadores (id, posto_id, nome, utilizador, password_hash, sal, iteracoes, perfil, criado_em, atualizado_em) VALUES (?, ?, 'x', ?, 'h', 's', 1, ?, 'd', 'd')"
+    "INSERT INTO utilizadores (id, posto_id, nome, utilizador, password_hash, sal, iteracoes, perfil, dispositivo_id, versao, criado_em, atualizado_em) VALUES (?, ?, 'x', ?, 'h', 's', 1, ?, 'TESTE', 1, 'd', 'd')"
   ).run('0'.repeat(25) + perfil.length, posto, 'u' + perfil, perfil);
   ins('administrador_central', null);
   assert.throws(() => ins('enfermeiro', null));
@@ -65,11 +65,11 @@ test('stock: lote normalizado, movimentos com sinal pelo tipo e saldo calculado'
   const db = bdNova();
   db.exec(gerarSql());
   const posto = idFixo('P', 1), vac = idFixo('V', 1), d = '2026-11-16T10:00:00.000Z';
-  const lote = (id, num) => db.prepare('INSERT INTO stock_lotes (id,posto_id,vacina_id,numero_lote,validade,criado_em,atualizado_em) VALUES (?,?,?,?,?,?,?)').run(id, posto, vac, num, '2027-12-31', d, d);
+  const lote = (id, num) => db.prepare('INSERT INTO stock_lotes (id,posto_id,vacina_id,numero_lote,validade,fabricante,criado_em,atualizado_em,dispositivo_id,versao) VALUES (?,?,?,?,?,?,?,?,?,?)').run(id, posto, vac, num, '2027-12-31', null, d, d, 'TESTE', 1);
   assert.throws(() => lote('L'.repeat(26), ' abc1 '), /CHECK/);          // não normalizado
   lote('A'.repeat(26), 'ABC1');
   lote('B'.repeat(26), 'ABC1');                                          // duplicado vindo de outro PC: permitido
-  const mov = (id, lid, tipo, q, motivo = null) => db.prepare('INSERT INTO stock_movimentos (id,posto_id,lote_id,tipo,quantidade,motivo,data_movimento,criado_em,atualizado_em) VALUES (?,?,?,?,?,?,?,?,?)').run(id, posto, lid, tipo, q, motivo, d, d, d);
+  const mov = (id, lid, tipo, q, motivo = null) => db.prepare('INSERT INTO stock_movimentos (id,posto_id,lote_id,tipo,quantidade,motivo,vacinacao_id,data_movimento,utilizador_id,criado_em,atualizado_em,dispositivo_id,versao) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)').run(id, posto, lid, tipo, q, motivo, null, d, null, d, d, 'TESTE', 1);
   mov('1'.repeat(26), 'A'.repeat(26), 'entrada', 50);
   mov('2'.repeat(26), 'B'.repeat(26), 'saida_vacinacao', 3);
   mov('3'.repeat(26), 'A'.repeat(26), 'perda', 2, 'frasco partido');
@@ -82,9 +82,13 @@ test('anulação exige motivo e só existe uma por vacinação', () => {
   const db = bdNova();
   db.exec(gerarSql());
   const posto = idFixo('P', 1), d = '2026-11-16T10:00:00.000Z', id = (c) => c.repeat(26);
-  db.prepare('INSERT INTO criancas (id,posto_id,numero_processo,nome,nome_busca,data_nascimento,criado_em,atualizado_em) VALUES (?,?,?,?,?,?,?,?)').run(id('C'), posto, 'MF-PC01-2026-000001', 'Ana', 'ana', '2026-01-01', d, d);
-  db.prepare("INSERT INTO vacinacoes (id,posto_id,crianca_id,vacina_id,numero_dose,data_administracao,administrado_por_nome,criado_em,atualizado_em) VALUES (?,?,?,?,1,'2026-02-01','Enf. X',?,?)").run(id('V'), posto, id('C'), idFixo('V', 1), d, d);
-  const anular = (aid, motivo) => db.prepare('INSERT INTO vacinacao_anulacoes (id,posto_id,vacinacao_id,motivo,criado_em,atualizado_em) VALUES (?,?,?,?,?,?)').run(aid, posto, id('V'), motivo, d, d);
+  db.prepare('INSERT INTO criancas (id,posto_id,numero_processo,nome,nome_busca,data_nascimento,criado_em,atualizado_em,dispositivo_id,versao) VALUES (?,?,?,?,?,?,?,?,?,?)').run(id('C'), posto, 'MF-PC01-2026-000001', 'Ana', 'ana', '2026-01-01', d, d, 'TESTE', 1);
+  db.prepare("INSERT INTO vacinacoes (id,posto_id,crianca_id,vacina_id,numero_dose,data_administracao,administrado_por_nome,criado_em,atualizado_em,dispositivo_id,versao) VALUES (?,?,?,?,1,'2026-02-01','Enf. X',?,?,?,?,?)").run(id('V'), posto, id('C'), idFixo('V', 1), d, d, null, d, d, null, 'TESTE', 1);
+  const anular = (aid, motivo) => {
+    const stmt = db.prepare('INSERT INTO vacinacao_anulacoes (id,posto_id,vacinacao_id,motivo,utilizador_id,criado_em,atualizado_em,dispositivo_id,versao,eliminado_em) VALUES (?,?,?,?,?,?,?,?,?,?)');
+
+    stmt.run(aid, posto, id('V'), motivo, null, d, d, 'TESTE', 1, null);
+  };
   assert.throws(() => anular(id('1'), '   '));
   anular(id('2'), 'lançada na criança errada');
   assert.throws(() => anular(id('3'), 'outra vez'));
