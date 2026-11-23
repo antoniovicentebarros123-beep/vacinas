@@ -36,3 +36,26 @@ npx wrangler d1 migrations apply vacinacao --remote
 - Valores clínicos do calendário que não vêm do cartão ficam `NULL` e a linha fica com `validar_clinica = 1`.
 - A interface foi validada com testes em DOM simulado; falta vê-la num navegador real.
 - Os navegadores não deixam a app bloquear a limpeza de dados: o sistema pede armazenamento persistente e mostra aviso enquanto houver registos por enviar.
+
+## Ambiente de desenvolvimento local (XAMPP)
+### Configuração do Apache
+Para desenvolvimento local com XAMPP:
+- Acesso principal: `http://localhost/vacinacao-infantil-fase1a/vacinas/public/login.php`
+- Apache permite Override: `AllowOverride All` em `C:/xampp/apache/conf/httpd.conf`
+- Sistema de segurança por .htaccess: recusa acesso à raiz, permite só `public/`
+
+### Arquivos de segurança (Apache 2.4)
+- `.htaccess` (raiz): `Require all denied` - nega acesso a tudo
+- `public/.htaccess`: `Require all granted` - permite acesso só à interface pública
+
+### Pastas protegidas (403 Forbidden)
+- `database/` - arquivos SQL da estrutura
+- `config/` - configurações da aplicação
+- `app/` - código backend PHP
+- `src/` - código Cloudflare Workers
+- `arquivo_cloudflare/` - arquivos do ambiente Cloudflare
+- `.git/` - repositório Git
+- `bin/`, `docs/` - pastas de documentação
+
+### Aviso importante
+Este sistema de .htaccess é **exclusivo para desenvolvimento local**. Em produção, a raiz do site será diretamente a pasta `public/` e as outras pastas ficarão fora do alcance do navegador.

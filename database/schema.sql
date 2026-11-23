@@ -1,291 +1,355 @@
--- =============================================================================
--- Schema MySQL/MariaDB para sistema de controlo de vacinação infantil
--- Compatibility: MariaDB 10.4.32 e MySQL 8 (não testado em MySQL 8)
--- InnoDB, utf8mb4_unicode_ci, chaves estrangeiras reais
--- IDs BIGINT UNSIGNED AUTO_INCREMENT
--- Ordem de criação: configuracoes, comunas, bairros, utilizadores, login_tentativas, encarregados, criancas, vacinas, calendario_vacinal, stock_lotes, consultas, vacinacoes, vacinacao_anulacoes, stock_movimentos, auditoria, contactos_faltosos
--- =============================================================================
+-- Schema do sistema de controlo de vacinação infantil
+-- Criado em 23/11/2026
+-- Base de dados: vacinas_db
+-- Motor: InnoDB
+-- Codificação: utf8mb4
+-- Collation: utf8mb4_unicode_ci
 
--- ---------- Configurações ----------
+-- Criar base de dados (remover o CREATE DATABASE para importação no phpMyAdmin)
+-- CREATE DATABASE IF NOT EXISTS vacinas_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- USE vacinas_db;
+
+-- Configurações do sistema
 CREATE TABLE configuracoes (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT 'ID único da configuração',
-  chave VARCHAR(100) NOT NULL UNIQUE COMMENT 'Chave de identificação da configuração',
-  valor TEXT NOT NULL COMMENT 'Valor da configuração',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data de última atualização',
-  criado_por VARCHAR(150) COMMENT 'Utilizador que criou a configuração'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT 'Tabela de configurações do sistema';
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    chave VARCHAR(100) NOT NULL,
+    valor TEXT NOT NULL,
+    descricao TEXT,
+    criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_chave (chave),
+    COMMENT 'Configurações do sistema como nome do posto, prefixo de processos, etc.'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Configurações do sistema';
 
--- ---------- Território (comunas e bairros) ----------
-CREATE TABLE comunas (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT 'ID único da comuna',
-  nome VARCHAR(100) NOT NULL COMMENT 'Nome da comuna',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data de última atualização',
-  criado_por VARCHAR(150) COMMENT 'Utilizador que criou a comuna',
-  eliminado_em DATETIME COMMENT 'Data de eliminação lógica'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT 'Tabela de comunas (território administrativo)';
-
+-- Bairros
 CREATE TABLE bairros (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT 'ID único do bairro',
-  comuna_id BIGINT UNSIGNED NOT NULL COMMENT 'ID da comuna a que pertence',
-  nome VARCHAR(100) NOT NULL COMMENT 'Nome do bairro',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data de última atualização',
-  criado_por VARCHAR(150) COMMENT 'Utilizador que criou o bairro',
-  eliminado_em DATETIME COMMENT 'Data de eliminação lógica',
-  FOREIGN KEY (comuna_id) REFERENCES comunas(id) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT 'Tabela de bairros dentro das comunas';
-CREATE INDEX idx_bairros_comuna ON bairros(comuna_id);
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    nome VARCHAR(100) NOT NULL,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    eliminado_em DATETIME NULL,
+    criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    criado_por_id BIGINT UNSIGNED NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_nome (nome),
+    COMMENT 'Bairros do município onde o posto está localizado'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Bairros';
 
--- ---------- Utilizadores ----------
+-- Utilizadores
 CREATE TABLE utilizadores (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT 'ID único do utilizador',
-  nome VARCHAR(150) NOT NULL COMMENT 'Nome completo do utilizador',
-  utilizador VARCHAR(50) NOT NULL UNIQUE COMMENT 'Nome de utilizador único para login',
-  password_hash VARCHAR(255) NOT NULL COMMENT 'Hash da palavra-passe (Argon2id)',
-  perfil VARCHAR(25) NOT NULL CHECK (perfil IN ('administrador','enfermeiro','recepcao')) COMMENT 'Perfil de acesso do utilizador',
-  ativo TINYINT NOT NULL DEFAULT 1 CHECK (ativo IN (0,1)) COMMENT 'Indica se o utilizador está ativo',
-  deve_mudar_password TINYINT NOT NULL DEFAULT 1 CHECK (deve_mudar_password IN (0,1)) COMMENT 'Indica se deve mudar a palavra-passe',
-  ultimo_login DATETIME COMMENT 'Data do último login bem-sucedido',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data de última atualização',
-  criado_por VARCHAR(150) COMMENT 'Utilizador que criou este registo'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT 'Tabela de utilizadores do sistema';
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    nome VARCHAR(100) NOT NULL,
+    utilizador VARCHAR(50) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    perfil ENUM('administrador', 'enfermeiro', 'recepcao', 'responsavel_stock') NOT NULL,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    deve_mudar_password BOOLEAN NOT NULL DEFAULT FALSE,
+    ultimo_login DATETIME NULL,
+    criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    criado_por_id BIGINT UNSIGNED NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_utilizador (utilizador),
+    COMMENT 'Utilizadores do sistema com perfis de acesso'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Utilizadores';
 
+-- Tentativas de login
 CREATE TABLE login_tentativas (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT 'ID único da tentativa de login',
-  utilizador VARCHAR(50) NOT NULL COMMENT 'Nome de utilizador tentado',
-  ip VARCHAR(64) NOT NULL COMMENT 'Endereço IP da tentativa',
-  sucesso TINYINT NOT NULL CHECK (sucesso IN (0,1)) COMMENT 'Indica se o login foi bem-sucedido',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data da tentativa'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT 'Tabela de registos de tentativas de login';
-CREATE INDEX idx_login_tentativas_utilizador ON login_tentativas(utilizador, criado_em);
-CREATE INDEX idx_login_tentativas_ip ON login_tentativas(ip, criado_em);
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    utilizador VARCHAR(50) NOT NULL,
+    sucesso BOOLEAN NOT NULL,
+    ip VARCHAR(45) NOT NULL,
+    criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_utilizador (utilizador, criado_em),
+    KEY idx_ip (ip, criado_em),
+    COMMENT 'Registo de tentativas de login para segurança'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Tentativas de login';
 
--- ---------- Pessoas ----------
+-- Encarregados de educação
 CREATE TABLE encarregados (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT 'ID único do encarregado de educação',
-  nome VARCHAR(150) NOT NULL COMMENT 'Nome completo do encarregado',
-  parentesco VARCHAR(40) COMMENT 'Grau de parentesco com a criança',
-  telefone VARCHAR(30) COMMENT 'Telefone principal (apenas dígitos)',
-  telefone_alt VARCHAR(30) COMMENT 'Telefone alternativo (apenas dígitos)',
-  morada VARCHAR(255) COMMENT 'Morada completa do encarregado',
-  bairro_id BIGINT UNSIGNED COMMENT 'ID do bairro de residência',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data de última atualização',
-  criado_por VARCHAR(150) COMMENT 'Utilizador que criou o registo',
-  eliminado_em DATETIME COMMENT 'Data de eliminação lógica',
-  FOREIGN KEY (bairro_id) REFERENCES bairros(id) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT 'Tabela de encarregados de educação';
-CREATE INDEX idx_encarregados_nome ON encarregados(nome);
-CREATE INDEX idx_encarregados_telefone ON encarregados(telefone);
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    nome VARCHAR(100) NOT NULL,
+    parentesco VARCHAR(50) NOT NULL,
+    telefone VARCHAR(20) NOT NULL,
+    telefone_alt VARCHAR(20) NULL,
+    morada TEXT NULL,
+    bairro_id BIGINT UNSIGNED NULL,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    eliminado_em DATETIME NULL,
+    criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    criado_por_id BIGINT UNSIGNED NULL,
+    PRIMARY KEY (id),
+    KEY idx_nome (nome),
+    KEY idx_telefone (telefone),
+    FOREIGN KEY (bairro_id) REFERENCES bairros(id) ON DELETE RESTRICT,
+    COMMENT 'Encarregados de educação das crianças'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Encarregados de educação';
 
+-- Crianças
 CREATE TABLE criancas (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT 'ID único da criança',
-  numero_processo VARCHAR(40) NOT NULL COMMENT 'Número do processo de saúde',
-  numero_cartao VARCHAR(40) COMMENT 'Número do cartão de vacinação',
-  nome VARCHAR(150) NOT NULL COMMENT 'Nome completo da criança',
-  data_nascimento DATE NOT NULL COMMENT 'Data de nascimento da criança',
-  data_nascimento_aproximada TINYINT NOT NULL DEFAULT 0 CHECK (data_nascimento_aproximada IN (0,1)) COMMENT 'Indica se a data de nascimento é aproximada',
-  sexo CHAR(1) CHECK (sexo IN ('M','F')) COMMENT 'Sexo da criança (M=Masculino, F=Feminino)',
-  encarregado_id BIGINT UNSIGNED NOT NULL COMMENT 'ID do encarregado responsável',
-  observacoes TEXT COMMENT 'Observações sobre a criança',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data de última atualização',
-  criado_por VARCHAR(150) COMMENT 'Utilizador que criou o registo',
-  eliminado_em DATETIME COMMENT 'Data de eliminação lógica',
-  FOREIGN KEY (encarregado_id) REFERENCES encarregados(id) ON DELETE RESTRICT,
-  UNIQUE KEY (numero_processo)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT 'Tabela de crianças com histórico de vacinação';
-CREATE INDEX idx_criancas_nome ON criancas(nome);
-CREATE INDEX idx_criancas_data_nascimento ON criancas(data_nascimento);
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    numero_processo VARCHAR(50) NOT NULL,
+    numero_cartao VARCHAR(50) NULL,
+    nome VARCHAR(100) NOT NULL,
+    data_nascimento DATE NOT NULL,
+    data_nascimento_aproximada BOOLEAN NOT NULL DEFAULT FALSE,
+    sexo ENUM('M', 'F') NOT NULL,
+    encarregado_id BIGINT UNSIGNED NOT NULL,
+    observacoes TEXT NULL,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    eliminado_em DATETIME NULL,
+    criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    criado_por_id BIGINT UNSIGNED NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_numero_processo (numero_processo),
+    KEY idx_nome (nome),
+    KEY idx_data_nascimento (data_nascimento),
+    FOREIGN KEY (encarregado_id) REFERENCES encarregados(id) ON DELETE RESTRICT,
+    COMMENT 'Registo de crianças no sistema'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Crianças';
 
--- ---------- Catálogo (vacinas e calendário) ----------
+-- Vacinas
 CREATE TABLE vacinas (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT 'ID único da vacina',
-  codigo VARCHAR(30) NOT NULL UNIQUE COMMENT 'Código único da vacina',
-  nome VARCHAR(150) NOT NULL COMMENT 'Nome completo da vacina/suplemento',
-  tipo VARCHAR(12) NOT NULL CHECK (tipo IN ('vacina','suplemento')) COMMENT 'Tipo de imunização',
-  via_administracao VARCHAR(40) COMMENT 'Via de administração',
-  ativo TINYINT NOT NULL DEFAULT 1 CHECK (ativo IN (0,1)) COMMENT 'Indica se está ativa no sistema',
-  ordem INTEGER NOT NULL DEFAULT 0 COMMENT 'Ordem de apresentação no calendário',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data de última atualização',
-  criado_por VARCHAR(150) COMMENT 'Utilizador que criou o registo',
-  eliminado_em DATETIME COMMENT 'Data de eliminação lógica'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT 'Tabela do catálogo de vacinas e suplementos';
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    nome VARCHAR(100) NOT NULL,
+    descricao TEXT NULL,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    eliminado_em DATETIME NULL,
+    criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    criado_por_id BIGINT UNSIGNED NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_nome (nome),
+    COMMENT 'Catálogo de vacinas disponíveis'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Vacinas';
 
+-- Calendário vacinal
 CREATE TABLE calendario_vacinal (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT 'ID único do item do calendário',
-  vacina_id BIGINT UNSIGNED NOT NULL COMMENT 'ID da vacina associada',
-  numero_dose INTEGER NOT NULL COMMENT 'Número da dose na sequência',
-  rotulo_idade VARCHAR(30) NOT NULL COMMENT 'Rótulo de idade (ex: \"2 meses\")',
-  idade_ideal_meses INTEGER COMMENT 'Idade ideal em meses para a dose',
-  janela_inicio_meses INTEGER COMMENT 'Início da janela recomendada em meses',
-  janela_fim_meses INTEGER COMMENT 'Fim da janela recomendada em meses',
-  idade_minima_meses INTEGER COMMENT 'Idade mínima em meses para a dose',
-  intervalo_minimo_dias INTEGER COMMENT 'Intervalo mínimo em dias em relação à dose anterior',
-  dose_anterior_exigida BIGINT UNSIGNED COMMENT 'ID da dose anterior obrigatória',
-  grupo_alternativa VARCHAR(40) COMMENT 'Grupo de vacinas alternativas',
-  dose_unica TINYINT NOT NULL DEFAULT 0 CHECK (dose_unica IN (0,1)) COMMENT 'Indica se é dose única',
-  ativo TINYINT NOT NULL DEFAULT 1 CHECK (ativo IN (0,1)) COMMENT 'Indica se está ativo',
-  validar_clinica TINYINT NOT NULL DEFAULT 1 CHECK (validar_clinica IN (0,1)) COMMENT 'Indica se requer validação clínica',
-  notas_validacao TEXT COMMENT 'Notas de validação clínica',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data de última atualização',
-  criado_por VARCHAR(150) COMMENT 'Utilizador que criou o registo',
-  eliminado_em DATETIME COMMENT 'Data de eliminação lógica',
-  FOREIGN KEY (vacina_id) REFERENCES vacinas(id) ON DELETE RESTRICT,
-  FOREIGN KEY (dose_anterior_exigida) REFERENCES calendario_vacinal(id) ON DELETE RESTRICT,
-  KEY (vacina_id, numero_dose)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT 'Calendário de vacinações por idade e dose';
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    vacina_id BIGINT UNSIGNED NOT NULL,
+    numero_dose TINYINT UNSIGNED NOT NULL,
+    rotulo_idade VARCHAR(50) NOT NULL,
+    idade_ideal_meses SMALLINT UNSIGNED NOT NULL,
+    janela_inicio_meses SMALLINT UNSIGNED NOT NULL,
+    janela_fim_meses SMALLINT UNSIGNED NOT NULL,
+    idade_minima_meses SMALLINT UNSIGNED NOT NULL,
+    intervalo_minimo_dias SMALLINT UNSIGNED NULL,
+    dose_anterior_exigida BIGINT UNSIGNED NULL,
+    grupo_alternativa VARCHAR(50) NULL,
+    dose_unica BOOLEAN NOT NULL DEFAULT FALSE,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    validar_clinica BOOLEAN NOT NULL DEFAULT TRUE,
+    notas_validacao TEXT NULL,
+    eliminado_em DATETIME NULL,
+    criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    criado_por_id BIGINT UNSIGNED NULL,
+    PRIMARY KEY (id),
+    KEY idx_vacina_dose (vacina_id, numero_dose),
+    FOREIGN KEY (vacina_id) REFERENCES vacinas(id) ON DELETE RESTRICT,
+    FOREIGN KEY (dose_anterior_exigida) REFERENCES calendario_vacinal(id) ON DELETE RESTRICT,
+    COMMENT 'Calendário vacinal com doses recomendadas'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Calendário vacinal';
 
--- ---------- Stock (movimentos) ----------
+-- Lotes de stock
 CREATE TABLE stock_lotes (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT 'ID único do lote',
-  vacina_id BIGINT UNSIGNED NOT NULL COMMENT 'ID da vacina do lote',
-  numero_lote VARCHAR(60) NOT NULL COMMENT 'Número do lote (normalizado em PHP)',
-  validade DATE NOT NULL COMMENT 'Data de validade da vacina',
-  fabricante VARCHAR(100) COMMENT 'Fabricante da vacina',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data de última atualização',
-  criado_por VARCHAR(150) COMMENT 'Utilizador que criou o registo',
-  eliminado_em DATETIME COMMENT 'Data de eliminação lógica',
-  FOREIGN KEY (vacina_id) REFERENCES vacinas(id) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT 'Tabela de lotes de vacinas';
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    vacina_id BIGINT UNSIGNED NOT NULL,
+    numero_lote VARCHAR(50) NOT NULL,
+    validade DATE NOT NULL,
+    fabricante VARCHAR(100) NOT NULL,
+    quantidade_inicial INT UNSIGNED NOT NULL,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    eliminado_em DATETIME NULL,
+    criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    criado_por_id BIGINT UNSIGNED NULL,
+    PRIMARY KEY (id),
+    KEY idx_vacina_lote (vacina_id, numero_lote),
+    FOREIGN KEY (vacina_id) REFERENCES vacinas(id) ON DELETE RESTRICT,
+    COMMENT 'Lotes de vacinas em stock'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Lotes de stock';
 
-CREATE TABLE stock_movimentos (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT 'ID único do movimento de stock',
-  lote_id BIGINT UNSIGNED NOT NULL COMMENT 'ID do lote movimentado',
-  tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('entrada','saida_vacinacao','perda','ajuste_mais','ajuste_menos')) COMMENT 'Tipo de movimento',
-  quantidade INTEGER NOT NULL CHECK (quantidade > 0) COMMENT 'Quantidade movimentada',
-  motivo TEXT NOT NULL COMMENT 'Motivo do movimento (obrigatório para perda, ajustes)',
-  vacinacao_id BIGINT UNSIGNED COMMENT 'ID da vacinação associada (apenas para saída)',
-  data_movimento DATE NOT NULL COMMENT 'Data do movimento',
-  utilizador_id BIGINT UNSIGNED COMMENT 'ID do utilizador que registou o movimento',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação',
-  criado_por VARCHAR(150) COMMENT 'Utilizador que criou o registo',
-  FOREIGN KEY (lote_id) REFERENCES stock_lotes(id) ON DELETE RESTRICT,
-  FOREIGN KEY (vacinacao_id) REFERENCES vacinacoes(id) ON DELETE RESTRICT,
-  FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE RESTRICT,
-  KEY (lote_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT 'Movimentos de stock de vacinas';
+-- Atendimentos
+CREATE TABLE atendimentos (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    crianca_id BIGINT UNSIGNED NOT NULL,
+    estado ENUM('aguardando', 'em_atendimento', 'concluido', 'cancelado', 'sem_vacina') NOT NULL,
+    recebido_por_id BIGINT UNSIGNED NULL,
+    atendido_por_id BIGINT UNSIGNED NULL,
+    iniciado_em DATETIME NULL,
+    concluido_em DATETIME NULL,
+    motivo TEXT NULL,
+    observacoes TEXT NULL,
+    peso_kg DECIMAL(5,2) NULL,
+    altura_cm DECIMAL(4,1) NULL,
+    perimetro_cefalico_cm DECIMAL(4,1) NULL,
+    criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_estado_criado (estado, criado_em),
+    FOREIGN KEY (crianca_id) REFERENCES criancas(id) ON DELETE RESTRICT,
+    FOREIGN KEY (recebido_por_id) REFERENCES utilizadores(id) ON DELETE RESTRICT,
+    FOREIGN KEY (atendido_por_id) REFERENCES utilizadores(id) ON DELETE RESTRICT,
+    COMMENT 'Atendimentos de crianças no posto'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Atendimentos';
 
--- ---------- Consultas e vacinação ----------
-CREATE TABLE consultas (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT 'ID único da consulta',
-  crianca_id BIGINT UNSIGNED NOT NULL COMMENT 'ID da criança consultada',
-  data_consulta DATE NOT NULL COMMENT 'Data da consulta',
-  utilizador_id BIGINT UNSIGNED COMMENT 'ID do utilizador que registou a consulta',
-  observacoes TEXT COMMENT 'Observações da consulta',
-  peso_kg DECIMAL(5,2) COMMENT 'Peso em kg',
-  altura_cm DECIMAL(5,2) COMMENT 'Altura em cm',
-  perimetro_cefalico_cm DECIMAL(5,2) COMMENT 'Perímetro cefálico em cm',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data de última atualização',
-  criado_por VARCHAR(150) COMMENT 'Utilizador que criou o registo',
-  eliminado_em DATETIME COMMENT 'Data de eliminação lógica',
-  FOREIGN KEY (crianca_id) REFERENCES criancas(id) ON DELETE RESTRICT,
-  FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE RESTRICT,
-  KEY (crianca_id, data_consulta)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT 'Registos de consultas médicas';
+-- Vacinas pretendidas nos atendimentos
+CREATE TABLE atendimento_vacinas (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    atendimento_id BIGINT UNSIGNED NOT NULL,
+    vacina_id BIGINT UNSIGNED NOT NULL,
+    criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_atendimento_vacina (atendimento_id, vacina_id),
+    FOREIGN KEY (atendimento_id) REFERENCES atendimentos(id) ON DELETE RESTRICT,
+    FOREIGN KEY (vacina_id) REFERENCES vacinas(id) ON DELETE RESTRICT,
+    COMMENT 'Vacinas pretendidas nos atendimentos'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Vacinas pretendidas nos atendimentos';
 
+-- Vacinações realizadas
 CREATE TABLE vacinacoes (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT 'ID único da vacinação',
-  crianca_id BIGINT UNSIGNED NOT NULL COMMENT 'ID da criança vacinada',
-  consulta_id BIGINT UNSIGNED COMMENT 'ID da consulta associada à vacinação',
-  vacina_id BIGINT UNSIGNED NOT NULL COMMENT 'ID da vacina administrada',
-  calendario_id BIGINT UNSIGNED COMMENT 'ID do calendário vacinal correspondente',
-  numero_dose INTEGER NOT NULL COMMENT 'Número da dose administrada',
-  data_administracao DATE NOT NULL COMMENT 'Data da administração da vacina',
-  lote_id BIGINT UNSIGNED COMMENT 'ID do lote de vacina utilizado',
-  administrado_por_id BIGINT UNSIGNED COMMENT 'ID do utilizador que administrou',
-  administrado_por_nome VARCHAR(150) NOT NULL COMMENT 'Nome do utilizador que administrou',
-  local_anatomico VARCHAR(40) COMMENT 'Local anatômico de administração',
-  origem VARCHAR(10) NOT NULL DEFAULT 'posto' CHECK (origem IN ('posto','externa')) COMMENT 'Origem da vacinação',
-  observacoes TEXT COMMENT 'Observações sobre a vacinação',
-  reacoes TEXT COMMENT 'Reações adversas registradas',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data de última atualização',
-  criado_por VARCHAR(150) COMMENT 'Utilizador que criou o registo',
-  eliminado_em DATETIME COMMENT 'Data de eliminação lógica',
-  FOREIGN KEY (crianca_id) REFERENCES criancas(id) ON DELETE RESTRICT,
-  FOREIGN KEY (consulta_id) REFERENCES consultas(id) ON DELETE RESTRICT,
-  FOREIGN KEY (vacina_id) REFERENCES vacinas(id) ON DELETE RESTRICT,
-  FOREIGN KEY (calendario_id) REFERENCES calendario_vacinal(id) ON DELETE RESTRICT,
-  FOREIGN KEY (lote_id) REFERENCES stock_lotes(id) ON DELETE RESTRICT,
-  FOREIGN KEY (administrado_por_id) REFERENCES utilizadores(id) ON DELETE RESTRICT,
-  KEY (crianca_id, vacina_id, numero_dose),
-  KEY (data_administracao)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT 'Registos de vacinações administradas';
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    crianca_id BIGINT UNSIGNED NOT NULL,
+    atendimento_id BIGINT UNSIGNED NULL,
+    vacina_id BIGINT UNSIGNED NOT NULL,
+    calendario_id BIGINT UNSIGNED NULL,
+    numero_dose TINYINT UNSIGNED NOT NULL,
+    data_administracao DATE NOT NULL,
+    lote_id BIGINT UNSIGNED NULL,
+    administrado_por_id BIGINT UNSIGNED NULL,
+    administrado_por_nome VARCHAR(100) NULL,
+    local_anatomico VARCHAR(100) NULL,
+    origem ENUM('posto', 'externa') NOT NULL,
+    observacoes TEXT NULL,
+    reacoes TEXT NULL,
+    criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_crianca_vacina_dose (crianca_id, vacina_id, numero_dose),
+    KEY idx_data_administracao (data_administracao),
+    FOREIGN KEY (crianca_id) REFERENCES criancas(id) ON DELETE RESTRICT,
+    FOREIGN KEY (atendimento_id) REFERENCES atendimentos(id) ON DELETE RESTRICT,
+    FOREIGN KEY (vacina_id) REFERENCES vacinas(id) ON DELETE RESTRICT,
+    FOREIGN KEY (calendario_id) REFERENCES calendario_vacinal(id) ON DELETE RESTRICT,
+    FOREIGN KEY (lote_id) REFERENCES stock_lotes(id) ON DELETE RESTRICT,
+    FOREIGN KEY (administrado_por_id) REFERENCES utilizadores(id) ON DELETE RESTRICT,
+    COMMENT 'Vacinações realizadas nas crianças'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Vacinações realizadas';
 
+-- Anulações de vacinação
 CREATE TABLE vacinacao_anulacoes (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT 'ID único da anulação',
-  vacinacao_id BIGINT UNSIGNED NOT NULL UNIQUE COMMENT 'ID da vacinação anulada',
-  motivo TEXT NOT NULL CHECK (CHAR_LENGTH(TRIM(motivo)) > 0) COMMENT 'Motivo da anulação',
-  utilizador_id BIGINT UNSIGNED COMMENT 'ID do utilizador que anulou',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data da anulação',
-  criado_por VARCHAR(150) COMMENT 'Utilizador que registou a anulação',
-  FOREIGN KEY (vacinacao_id) REFERENCES vacinacoes(id) ON DELETE RESTRICT,
-  FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT 'Anulações de vacinações';
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    vacinacao_id BIGINT UNSIGNED NOT NULL,
+    motivo TEXT NOT NULL,
+    utilizador_id BIGINT UNSIGNED NOT NULL,
+    criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_vacinacao (vacinacao_id),
+    FOREIGN KEY (vacinacao_id) REFERENCES vacinacoes(id) ON DELETE RESTRICT,
+    FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE RESTRICT,
+    CHECK (CHAR_LENGTH(TRIM(motivo)) > 0),
+    COMMENT 'Anulações de vacinações com motivo'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Anulações de vacinação';
 
--- ---------- Auditoria e contactos ----------
-CREATE TABLE auditoria (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT 'ID único do registo de auditoria',
-  entidade VARCHAR(40) NOT NULL COMMENT 'Nome da tabela auditada',
-  entidade_id BIGINT UNSIGNED NOT NULL COMMENT 'ID do registo auditado',
-  acao VARCHAR(20) NOT NULL COMMENT 'Ação realizada (CREATE, UPDATE, DELETE)',
-  campo VARCHAR(60) COMMENT 'Campo alterado',
-  valor_anterior TEXT COMMENT 'Valor anterior ao alterar',
-  valor_novo TEXT COMMENT 'Valor novo após alteração',
-  utilizador_id BIGINT UNSIGNED COMMENT 'ID do utilizador que realizou a ação',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data da ação',
-  criado_por VARCHAR(150) COMMENT 'Utilizador que registrou a ação',
-  FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT 'Tabela de auditoria do sistema';
-CREATE INDEX idx_auditoria_entidade ON auditoria(entidade, entidade_id, criado_em);
+-- Movimentos de stock
+CREATE TABLE stock_movimentos (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    lote_id BIGINT UNSIGNED NOT NULL,
+    tipo ENUM('entrada', 'saida_vacinacao', 'perda', 'ajuste_mais', 'ajuste_menos') NOT NULL,
+    quantidade INT UNSIGNED NOT NULL,
+    motivo TEXT NULL,
+    vacinacao_id BIGINT UNSIGNED NULL,
+    data_movimento DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    utilizador_id BIGINT UNSIGNED NULL,
+    criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_lote_data (lote_id, data_movimento),
+    FOREIGN KEY (lote_id) REFERENCES stock_lotes(id) ON DELETE RESTRICT,
+    FOREIGN KEY (vacinacao_id) REFERENCES vacinacoes(id) ON DELETE RESTRICT,
+    FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE RESTRICT,
+    CHECK (
+        (tipo IN ('entrada', 'saida_vacinacao') AND motivo IS NULL) OR
+        (tipo IN ('perda', 'ajuste_mais', 'ajuste_menos') AND motivo IS NOT NULL AND CHAR_LENGTH(TRIM(motivo)) > 0)
+    ),
+    COMMENT 'Movimentos de stock de vacinas'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Movimentos de stock';
 
+-- Contactos faltosos
 CREATE TABLE contactos_faltosos (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT 'ID único do contacto',
-  crianca_id BIGINT UNSIGNED NOT NULL COMMENT 'ID da criança contactada',
-  data_contacto DATETIME NOT NULL COMMENT 'Data e hora do contacto',
-  canal VARCHAR(10) NOT NULL DEFAULT 'telefone' CHECK (canal IN ('telefone','sms','whatsapp')) COMMENT 'Canal de contacto',
-  resultado VARCHAR(100) COMMENT 'Resultado do contacto',
-  notas TEXT COMMENT 'Notas sobre o contacto',
-  utilizador_id BIGINT UNSIGNED COMMENT 'ID do utilizador que registrou o contacto',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação',
-  criado_por VARCHAR(150) COMMENT 'Utilizador que criou o registo',
-  eliminado_em DATETIME COMMENT 'Data de eliminação lógica',
-  FOREIGN KEY (crianca_id) REFERENCES criancas(id) ON DELETE RESTRICT,
-  FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE RESTRICT,
-  KEY (crianca_id, data_contacto)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT 'Contactos realizados a crianças faltosas';
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    crianca_id BIGINT UNSIGNED NOT NULL,
+    data_contacto DATE NOT NULL,
+    canal ENUM('telefone', 'sms', 'whatsapp') NOT NULL,
+    resultado VARCHAR(100) NOT NULL,
+    notas TEXT NULL,
+    utilizador_id BIGINT UNSIGNED NULL,
+    criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_crianca_data (crianca_id, data_contacto),
+    FOREIGN KEY (crianca_id) REFERENCES criancas(id) ON DELETE RESTRICT,
+    FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE RESTRICT,
+    COMMENT 'Contactos a crianças que saíram sem vacina'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Contactos faltosos';
 
--- ---------- Vista de saldo de stock ----------
+-- Auditoria
+CREATE TABLE auditoria (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    entidade VARCHAR(50) NOT NULL,
+    entidade_id BIGINT UNSIGNED NOT NULL,
+    acao VARCHAR(20) NOT NULL,
+    campo VARCHAR(50) NULL,
+    valor_anterior TEXT NULL,
+    valor_novo TEXT NULL,
+    utilizador_id BIGINT UNSIGNED NULL,
+    criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_entidade_acao (entidade, acao),
+    KEY idx_criado_em (criado_em),
+    FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE RESTRICT,
+    COMMENT 'Registo de auditoria do sistema'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Auditoria';
+
+-- Vista: Saldo de lotes
 CREATE VIEW stock_saldo_lotes AS
 SELECT 
-  sl.id,
-  sl.vacina_id,
-  v.codigo AS vacina_codigo,
-  v.nome AS vacina_nome,
-  sl.numero_lote,
-  MIN(sl.validade) AS validade,
-  sl.fabricante,
-  COALESCE(SUM(
-    CASE WHEN sm.tipo = 'entrada' THEN sm.quantidade
-         WHEN sm.tipo = 'saida_vacinacao' THEN -sm.quantidade
-         WHEN sm.tipo = 'perda' THEN -sm.quantidade
-         WHEN sm.tipo = 'ajuste_mais' THEN sm.quantidade
-         WHEN sm.tipo = 'ajuste_menos' THEN -sm.quantidade
-         ELSE 0 END
-  ), 0) AS saldo_atual
+    sl.id,
+    sl.vacina_id,
+    sl.numero_lote,
+    sl.validade,
+    sl.fabricante,
+    COALESCE(SUM(
+        CASE sm.tipo 
+            WHEN 'entrada' THEN sm.quantidade 
+            WHEN 'saida_vacinacao' THEN -sm.quantidade 
+            WHEN 'perda' THEN -sm.quantidade 
+            WHEN 'ajuste_mais' THEN sm.quantidade 
+            WHEN 'ajuste_menos' THEN -sm.quantidade 
+            ELSE 0 
+        END
+    ), 0) as saldo_atual
 FROM stock_lotes sl
-JOIN vacinas v ON sl.vacina_id = v.id
-LEFT JOIN stock_movimentos sm ON sl.id = sm.lote_id AND sm.eliminado_em IS NULL
-WHERE sl.eliminado_em IS NULL
-GROUP BY sl.id, sl.vacina_id, v.codigo, v.nome, sl.numero_lote, sl.validade, sl.fabricante;
--- =============================================================================
--- Fim do schema
--- =============================================================================
+LEFT JOIN stock_movimentos sm ON sl.id = sm.lote_id
+WHERE sl.ativo = TRUE AND sl.eliminado_em IS NULL
+GROUP BY sl.id, sl.vacina_id, sl.numero_lote, sl.validade, sl.fabricante;
+
+-- Vista: Disponibilidade de vacinas
+CREATE VIEW vacinas_disponiveis AS
+SELECT 
+    v.id,
+    v.nome,
+    COALESCE(
+        SUM(CASE 
+            WHEN sl.validade >= CURDATE() THEN ssl.saldo_atual 
+            ELSE 0 
+        END), 
+        0
+    ) as saldo_disponivel
+FROM vacinas v
+LEFT JOIN stock_lotes sl ON v.id = sl.vacina_id AND sl.ativo = TRUE AND sl.eliminado_em IS NULL
+LEFT JOIN stock_saldo_lotes ssl ON sl.id = ssl.id
+WHERE v.ativo = TRUE AND v.eliminado_em IS NULL
+GROUP BY v.id, v.nome;
