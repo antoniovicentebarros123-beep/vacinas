@@ -39,7 +39,7 @@ function toggleSidebar(sidebarSelector, menuButtonSelector) {
         const newState = isOpen ? 'fechado' : 'aberto';
         sidebar.dataset.menu = newState;
         
-        menuButton.setAttribute('aria-label', newState === 'aberto' ? 'Fechar menu' : 'Abrir menu');
+        menuButton.setAttribute('aria-label', newState === 'aberto' ? 'Fechar navegação' : 'Abrir menu');
     });
     
     // Fechar menu ao clicar fora

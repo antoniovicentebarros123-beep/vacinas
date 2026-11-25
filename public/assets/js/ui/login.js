@@ -3,7 +3,7 @@
 import { h, icone } from './dom.js';
 import { entrar } from '../autenticacao.js';
 
-export function desenharLogin(raiz, { aoEntrar }) {
+export function desenharLogin(raiz, { nomeInstituicao = '', aoEntrar }) {
   const erro = h('div', { classe: 'mensagem mensagem-erro', role: 'alert', hidden: true });
   const ajudaEsqueci = h('div', { classe: 'mensagem mensagem-aviso', hidden: true },
     'Peça ao administrador do seu posto para repor a palavra-passe. No próximo início de sessão terá de escolher uma nova.');
@@ -72,7 +72,7 @@ export function desenharLogin(raiz, { aoEntrar }) {
         h('div', { classe: 'login-selo', 'aria-hidden': 'true' }, icone('user')),
         h('section', { classe: 'login-painel', 'aria-labelledby': 'titulo-login' },
           h('h1', { id: 'titulo-login' }, 'Entrar'),
-          h('p', { classe: 'login-nome' }, 'Centro Médico Hospitalar Maria de Fátima'),
+          h('p', { classe: 'login-nome' }, nomeInstituicao),
           formulario,
           h('p', { classe: 'login-rodape' }, 'Controlo de vacinação infantil')))));
   campoUtilizador.focus();

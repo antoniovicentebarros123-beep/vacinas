@@ -2,3 +2,11 @@ node_modules/
 .wrangler/
 .dev.vars
 *.sqlite
+config/config.local.php
+database/*_antes_fase2_*.sql
+database/backup_antes_fase2.sql
+
+.env
+.dev.vars
+node_modules/
+vendor/

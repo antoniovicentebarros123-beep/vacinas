@@ -1,43 +1,16 @@
-# Controlo de Vacinação Infantil (PWA, Cloudflare)
+# Controlo de Vacinação Infantil (PHP + XAMPP)
 
-Sistema offline-first para postos médicos em Angola. Interface em HTML/CSS/JS puros, API em Cloudflare Workers, base central em D1, backups em R2.
+Sistema de gestão de vacinação para postos médicos em Angola, desenvolvido com PHP 8.0, MariaDB e frontend em HTML/CSS/JS puros.
 
-**Estado: Fase 1a** (estrutura, base de dados, camada local, layout). O login (Fase 1b) aguarda a aprovação do desenho do PBKDF2.
+**Estado: Fase 1b** (login real com password_hash/password_verify, sessão segura, bloqueio após 5 tentativas).
 
 ## Requisitos
-- Node.js 20 ou superior
-- Conta Cloudflare para o deploy. O plano Workers Gratuito dá 10 ms de CPU por pedido, e o hash de palavras-passe provavelmente excede isso: conta Workers Paid recomendada (a confirmar por medição na Fase 1b).
-
-## Desenvolvimento local
-```bash
-npm install
-npm run seed:gerar         # gera database/seeds/0001_catalogo.sql (falha se não houver 15 oportunidades)
-npm run db:migrar:local    # wrangler d1 migrations apply vacinacao --local
-npm run db:seed:local      # carrega posto, vacinas e calendário
-npm run dev                # http://localhost:8787
-npm test                   # 31 testes
-```
-Pré-visualização do painel sem login (temporária, só em localhost): `http://localhost:8787/?previa`
-
-## Criar a D1 na Cloudflare
-```bash
-npx wrangler d1 create vacinacao      # copiar o database_id para o wrangler.jsonc
-npx wrangler d1 migrations apply vacinacao --remote
-```
-
-## Estrutura
-- `public/`: interface estática. `public/shared/` é a fonte única de regras, importada também pelo Worker (nada de segredos aqui)
-- `src/worker/`: API (router próprio, CSRF, cabeçalhos de segurança)
-- `database/migrations/` SQL da D1 · `database/seeds/` calendário vacinal (IDs fixos)
-- `tests/`: testes (`node --test`)
-
-## Limites conhecidos desta fase
-- Sem login, sincronização, Service Worker nem manifest (Fases 1b e 5).
-- Valores clínicos do calendário que não vêm do cartão ficam `NULL` e a linha fica com `validar_clinica = 1`.
-- A interface foi validada com testes em DOM simulado; falta vê-la num navegador real.
-- Os navegadores não deixam a app bloquear a limpeza de dados: o sistema pede armazenamento persistente e mostra aviso enquanto houver registos por enviar.
+- XAMPP com PHP 8.0+
+- MariaDB/MySQL
+- Navegador moderno com suporte a CSS Grid e Flexbox
 
 ## Ambiente de desenvolvimento local (XAMPP)
+
 ### Configuração do Apache
 Para desenvolvimento local com XAMPP:
 - Acesso principal: `http://localhost/vacinacao-infantil-fase1a/vacinas/public/login.php`
@@ -52,10 +25,93 @@ Para desenvolvimento local com XAMPP:
 - `database/` - arquivos SQL da estrutura
 - `config/` - configurações da aplicação
 - `app/` - código backend PHP
-- `src/` - código Cloudflare Workers
-- `arquivo_cloudflare/` - arquivos do ambiente Cloudflare
+- `arquivo_cloudflare/` - arquivos do ambiente Cloudflare (versão original)
 - `.git/` - repositório Git
 - `bin/`, `docs/` - pastas de documentação
 
 ### Aviso importante
 Este sistema de .htaccess é **exclusivo para desenvolvimento local**. Em produção, a raiz do site será diretamente a pasta `public/` e as outras pastas ficarão fora do alcance do navegador.
+
+## Arquitetura do sistema
+
+### Backend PHP
+- `app/core/helpers.php` - Funções auxiliares (configuração, formatação de datas, URL base)
+- `app/views/partials/` - Templates reutilizáveis (head.php, foot.php)
+- `config/config.local.php` - Configuração do nome do posto e modo de pré-visualização
+
+### Frontend
+- `public/assets/css/` - Estilos em módulos separados
+  - `variaveis.css` - Variáveis de design e paleta de cores
+  - `base.css` - Estilos base e tipografia com fontes Inter
+  - `icones.css` - Sistema de ícones com mask-image (Lucide)
+  - `componentes.css` - Componentes reutilizáveis (botões, formulários)
+  - `layout.css` - Layout responsivo e grade
+  - `paginas/` - Estilos específicos por página (login.css, painel.css)
+  - `previa.css` - Estilos para modo de pré-visualização
+  - `impressao.css` - Estilos para impressão
+- `public/assets/js/` - JavaScript modular
+  - `ui/dom.js` - Criação de elementos segura contra XSS
+  - `ui/login.js` e `ui/painel.js` - Interface original do sistema
+  - `app.js` - Arranque da aplicação (adaptado para pré-visualização)
+- `public/shared/` - Regras compartilhadas (validações, perfis)
+
+### Banco de dados
+- `database/schema.sql` - Estrutura das tabelas: crianças, utilizadores e segurança
+- `database/seeds/` - Dados de exemplo e calendário vacinal
+- `bin/criar_admin.php` - Script para criar conta administradora inicial
+
+### Recursos estáticos
+- `public/assets/icons/` - Ícones SVG em formato Lucide
+- `public/assets/fonts/` - Fontes Inter (woff2)
+
+## Funcionalidades implementadas
+
+### Interface web
+- ✅ Página de login com campos de usuário e senha
+- ✅ Painel principal com navegação responsiva
+- ✅ Sistema de ícones dinâmicos (herdam cor do texto)
+- ✅ Formatação de datas em português
+- ✅ Saudação personalizada (Bom dia/Boa tarde/Boa noite)
+- ✅ Layout responsivo com barra lateral e grade de cartões
+
+### Modo pré-visualização
+> ⚠️ **Removido na Fase 1b:** O sistema agora requer autenticação real para acessar o painel.
+
+### Sistema de segurança
+- Hash de senhas com password_hash() + password_verify()
+- Sessões HTTP-only e SameSite Strict
+- Tokens CSRF para formulários
+- Controle de acesso a recursos estáticos via .htaccess
+- Bloqueio temporário após 5 tentativas de login falhadas
+- Registo de tentativas de login para auditoria
+
+## Próximas fases
+- **Fase 2**: Crianças - Cadastro e gestão de crianças
+- **Fase 3**: Vacinação - Registro de vacinações
+- **Fase 4**: Faltosos e Stock - Contactos e gestão de lotes
+- **Fase 6**: Relatórios - Dashboard e exportação de dados
+- **Fase 7**: Administração - Utilizadores e configurações
+
+## Limites conhecidos desta fase
+- Interface baseada em placeholders (dados fictícios)
+- Sistema de persistência ainda não implementado
+- Falta implementação das funcionalidades de gestão de crianças, vacinações, etc.
+
+## Estrutura de arquivos
+```
+vacinas/
+├── public/                 # Interface acessível via web
+│   ├── assets/             # Recursos estáticos
+│   │   ├── css/           # Estilos organizados por módulo
+│   │   ├── js/            # JavaScript modular
+│   │   ├── icons/        # Ícones SVG
+│   │   └── fonts/        # Fontes Inter
+│   ├── login.php          # Página de login
+│   └── painel.php         # Painel principal
+├── app/                   # Código backend PHP
+│   └── core/             # Lógica central
+├── database/             # Esquema e dados de exemplo
+├── config/               # Configurações locais
+├── tests/               # Scripts de verificação
+└── arquivo_cloudflare/   # Versão original em Cloudflare
+```

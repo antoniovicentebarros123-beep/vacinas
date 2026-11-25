@@ -3,8 +3,7 @@
  * Partial: Rodapé HTML
  */
 
-// JavaScript básico para interface
+// Cada página carrega o seu próprio JavaScript no final do documento.
 ?>
-<script src="<?php echo e(url_base() . 'assets/js/interface.js'); ?>"></script>
 </body>
 </html>

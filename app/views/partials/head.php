@@ -8,23 +8,6 @@ header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: same-origin');
 header('Content-Security-Policy: default-src \'self\'; script-src \'self\'; style-src \'self\'; img-src \'self\' data:; font-src \'self\';');
-
-// Configurar sessão antes de iniciar
-ini_set('session.cookie_httponly', 1);
-ini_set('session.cookie_samesite', 'Strict');
-ini_set('session.cookie_secure', 0); // Mudar para 1 em HTTPS
-ini_set('session.use_strict_mode', 1);
-ini_set('session.use_trans_sid', 0);
-
-// Iniciar sessão com segurança
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Gerar token CSRF se não existir
-if (!isset($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
 ?>
 
 <!DOCTYPE html>
@@ -32,20 +15,32 @@ if (!isset($_SESSION['csrf_token'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controlo de Vacinação Infantil</title>
+    <?php
+    $baseAssets = isset($baseCabecalho) ? $baseCabecalho : url_base();
+    $tituloBase = $tituloDocumento ?? 'Controlo de Vacinação Infantil';
+    $nomeInstituicao = nome_posto();
+    $tituloCompleto = $nomeInstituicao !== '' ? $tituloBase . ' — ' . $nomeInstituicao : $tituloBase;
+    ?>
+    <title><?php echo e($tituloCompleto); ?></title>
+    <meta name="theme-color" content="#0f5e73">
     
     <?php if (is_preview_mode()): ?>
     <meta name="robots" content="noindex, nofollow">
     <?php endif; ?>
     
-    <link rel="stylesheet" href="<?php echo e(url_base() . 'assets/css/base.css'); ?>">
-    <link rel="stylesheet" href="<?php echo e(url_base() . 'assets/css/componentes.css'); ?>">
-    <link rel="stylesheet" href="<?php echo e(url_base() . 'assets/css/layout.css'); ?>">
-    <?php if (isset($pagina_css) && $pagina_css): ?>
-    <link rel="stylesheet" href="<?php echo e(url_base() . 'assets/css/paginas/' . $pagina_css . '.css'); ?>">
-    <?php else: ?>
-    <link rel="stylesheet" href="<?php echo e(url_base() . 'assets/css/paginas/login.css'); ?>">
+    <!-- Mesma ordem dos ficheiros CSS do index.html original da tag cloudflare-fase1a. -->
+    <link rel="stylesheet" href="<?php echo e($baseAssets . 'assets/css/variaveis.css'); ?>">
+    <link rel="stylesheet" href="<?php echo e($baseAssets . 'assets/css/base.css'); ?>">
+    <link rel="stylesheet" href="<?php echo e($baseAssets . 'assets/css/icones.css'); ?>">
+    <link rel="stylesheet" href="<?php echo e($baseAssets . 'assets/css/componentes.css'); ?>">
+    <link rel="stylesheet" href="<?php echo e($baseAssets . 'assets/css/layout.css'); ?>">
+    <link rel="stylesheet" href="<?php echo e($baseAssets . 'assets/css/paginas/login.css'); ?>">
+    <link rel="stylesheet" href="<?php echo e($baseAssets . 'assets/css/paginas/painel.css'); ?>">
+    <link rel="stylesheet" href="<?php echo e($baseAssets . 'assets/css/impressao.css'); ?>" media="print">
+    <?php if (is_preview_mode()): ?>
+    <link rel="stylesheet" href="<?php echo e($baseAssets . 'assets/css/previa.css'); ?>">
     <?php endif; ?>
+    <link rel="stylesheet" href="<?php echo e(url_publica() . 'assets/css/modulos.css'); ?>">
 </head>
 <body>
     <?php if (is_preview_mode()): ?>

@@ -1,94 +1,125 @@
--- Seed do sistema de controlo de vacinação infantil
--- Dados iniciais estáticos com IDs fixos
--- Criado em 23/11/2026
+-- Seed inicial do sistema de controlo de vacinação infantil.
+-- Dados estáticos com IDs fixos: 18 itens de catálogo, 15 oportunidades e 37 doses.
+-- Os valores clínicos não indicados no cartão ficam NULL e marcados para validação.
+-- Importar apenas depois de database/schema.sql, numa base já criada.
 
--- Configurações iniciais
-INSERT INTO configuracoes (chave, valor, descricao) VALUES
-('nome_posto', 'Posto de Saúde do Bairro do Rangel', 'Nome oficial do posto de saúde'),
-('prefixo_processo', 'RG', 'Prefixo para número de processo das crianças'),
-('modo_previa', 'true', 'Modo de pré-visualização para desenvolvimento');
+-- Configurações iniciais.
+INSERT INTO configuracoes (id, chave, valor, descricao) VALUES
+(1, 'nome_posto', 'Centro Médico Hospitalar Maria de Fátima', 'Nome da instituição'),
+(2, 'prefixo_processo', 'RG', 'Prefixo provisório do número de processo das crianças'),
+(3, 'max_login_attempts', '5', 'Número máximo de tentativas falhadas antes do bloqueio'),
+(4, 'login_lockout_time', '900', 'Duração do bloqueio temporário em segundos'),
+(5, 'stock_validade_aviso_dias', '30', 'Dias restantes para alertar de validade próxima; predefinição: 30'),
+(6, 'session_lifetime', '1800', 'Duração máxima de inatividade da sessão em segundos'),
+(7, 'session_remember_lifetime', '604800', 'Duração da opção Manter sessão em segundos'),
+(8, 'stock_minimo_doses', '5', 'Saldo igual ou inferior alerta de stock baixo; predefinição: 5 doses'),
+(9, 'faltosos_aviso_dias', '30', 'Antecedência operacional do aviso “a vencer”; predefinição: 30 dias');
 
--- Vacinas (catálogo fixo)
+-- Catálogo inicial transcrito do cartão.
 INSERT INTO vacinas (id, nome, descricao, ativo, criado_por_id) VALUES
-(1, 'BCG', 'Vacina BCG para tuberculose', TRUE, NULL),
-(2, 'Pentavalente', 'Vacina pentavalente (Difteria, Tétano, Coqueluche, Haemophilus influenzae tipo b, Hepatite B)', TRUE, NULL),
-(3, 'Vacina contra o Virus da Poliomielite (VIP)', 'Vacina injetável contra o virus da poliomielite', TRUE, NULL),
-(4, 'Vacina contra o Sarampo', 'Vacina contra o sarampo', TRUE, NULL),
-(5, 'Vacina contra a Rubéola', 'Vacina contra a rubéola', TRUE, NULL),
-(6, 'Vacina contra as Caxumbas', 'Vacina contra as caxumbas', TRUE, NULL),
-(7, 'Vacina contra o Haemophilus influenzae tipo b (Hib)', 'Vacina contra o Haemophilus influenzae tipo b', TRUE, NULL),
-(8, 'Vacina contra a Hepatite B', 'Vacina contra a hepatite B', TRUE, NULL),
-(9, 'Vacina contra o Tétano', 'Vacina contra o tétano', TRUE, NULL),
-(10, 'Vacina contra a Difteria', 'Vacina contra a difteria', TRUE, NULL),
-(11, 'Vacina contra a Coqueluche', 'Vacina contra a coqueluche', TRUE, NULL),
-(12, 'Vacina contra a Febre Amarela', 'Vacina contra a febre amarela', TRUE, NULL),
-(13, 'Vacina contra o Rotavírus', 'Vacina contra o rotavírus', TRUE, NULL),
-(14, 'Vacina contra o Pneumococo', 'Vacina contra o pneumococo', TRUE, NULL),
-(15, 'Vacina contra o Meningococo', 'Vacina contra o meningococo', TRUE, NULL),
-(16, 'Vacina contra a Hepatite A', 'Vacina contra a hepatite A', TRUE, NULL),
-(17, 'Vacina contra o HPV', 'Vacina contra o HPV', TRUE, NULL),
-(18, 'Vacina contra a Varicela', 'Vacina contra a varicela', TRUE, NULL);
+(1, 'BCG', NULL, TRUE, NULL),
+(2, 'Polio oral', NULL, TRUE, NULL),
+(3, 'Hepatite B', NULL, TRUE, NULL),
+(4, 'Pentavalente', NULL, TRUE, NULL),
+(5, 'Pneumo 13', NULL, TRUE, NULL),
+(6, 'Rotavírus', NULL, TRUE, NULL),
+(7, 'Meningocócica conjugada quadrivalente (A, C, Y, W-135)', NULL, TRUE, NULL),
+(8, 'Polio injectável (VPI)', NULL, TRUE, NULL),
+(9, 'Vitamina A', NULL, TRUE, NULL),
+(10, 'Sarampo + Rubéola', NULL, TRUE, NULL),
+(11, 'Febre amarela', NULL, TRUE, NULL),
+(12, 'Hepatite A', NULL, TRUE, NULL),
+(13, 'Varicela', NULL, TRUE, NULL),
+(14, 'VASPR', NULL, TRUE, NULL),
+(15, 'Tetravalente', NULL, TRUE, NULL),
+(16, 'Febre tifoide', NULL, TRUE, NULL),
+(17, 'Tétano', NULL, TRUE, NULL),
+(18, 'HPV', NULL, TRUE, NULL);
 
--- Calendário vacinal (baseado nas 15 oportunidades com IDs fixos)
-INSERT INTO calendario_vacinal (id, vacina_id, numero_dose, rotulo_idade, idade_ideal_meses, janela_inicio_meses, janela_fim_meses, idade_minima_meses, intervalo_minimo_dias, dose_anterior_exigida, grupo_alternativa, dose_unica, ativo, validar_clinica, notas_validacao, criado_por_id) VALUES
--- Nascimento (ao nascer)
-(1, 1, 1, 'Nascimento', 0, 0, 0, 0, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'BCG ao nascer', NULL),
-(2, 3, 1, 'Nascimento', 0, 0, 0, 0, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'VIP ao nascer', NULL),
+-- Calendário vacinal: 15 oportunidades e 37 doses.
+-- janela_inicio_meses, janela_fim_meses, idade_minima_meses, intervalo_minimo_dias
+-- e dose_anterior_exigida só são preenchidos quando o cartão fornece o valor.
+INSERT INTO calendario_vacinal (
+    id,
+    vacina_id,
+    numero_dose,
+    rotulo_idade,
+    idade_ideal_meses,
+    janela_inicio_meses,
+    janela_fim_meses,
+    idade_minima_meses,
+    intervalo_minimo_dias,
+    dose_anterior_exigida,
+    grupo_alternativa,
+    dose_unica,
+    ativo,
+    validar_clinica,
+    notas_validacao,
+    criado_por_id
+) VALUES
+-- Ao nascer.
+(1, 1, 1, 'Ao nascer', 0, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(2, 2, 0, 'Ao nascer', 0, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Dose ao nascer registada como dose 0: a validar pela equipa clínica.', NULL),
+(3, 3, 1, 'Ao nascer', 0, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Dose ao nascer registada como dose 1: a validar pela equipa clínica.', NULL),
 
--- 6 semanas
-(3, 2, 1, '6 semanas', 1.5, 1, 3, 6, 30, NULL, NULL, FALSE, TRUE, TRUE, 'Primeira dose da Pentavalente', NULL),
-(4, 7, 1, '6 semanas', 1.5, 1, 3, 6, 30, NULL, NULL, FALSE, TRUE, 'Primeira dose do Hib', NULL),
-(5, 8, 1, '6 semanas', 1.5, 1, 3, 6, 30, NULL, NULL, FALSE, TRUE, 'Primeira dose da Hepatite B', NULL),
-(6, 10, 1, '6 semanas', 1.5, 1, 3, 6, 30, NULL, NULL, FALSE, TRUE, 'Primeira dose da Difteria', NULL),
-(7, 11, 1, '6 semanas', 1.5, 1, 3, 6, 30, NULL, NULL, FALSE, TRUE, 'Primeira dose da Coqueluche', NULL),
+-- 2 meses.
+(4, 4, 1, '2 meses', 2, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(5, 5, 1, '2 meses', 2, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(6, 2, 1, '2 meses', 2, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(7, 6, 1, '2 meses', 2, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
 
--- 10 semanas
-(8, 2, 2, '10 semanas', 2.5, 2, 4, 10, 30, 3, NULL, FALSE, TRUE, 'Segunda dose da Pentavalente', NULL),
-(9, 7, 2, '10 semanas', 2.5, 2, 4, 10, 30, 4, NULL, FALSE, TRUE, 'Segunda dose do Hib', NULL),
-(10, 8, 2, '10 semanas', 2.5, 2, 4, 10, 30, 5, NULL, FALSE, TRUE, 'Segunda dose da Hepatite B', NULL),
-(11, 10, 2, '10 semanas', 2.5, 2, 4, 10, 30, 6, NULL, FALSE, TRUE, 'Segunda dose da Difteria', NULL),
-(12, 11, 2, '10 semanas', 2.5, 2, 4, 10, 30, 7, NULL, FALSE, TRUE, 'Segunda dose da Coqueluche', NULL),
+-- 3 meses.
+(8, 7, 1, '3 meses', 3, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
 
--- 14 semanas
-(13, 2, 3, '14 semanas', 3.5, 3, 5, 14, 30, 8, NULL, FALSE, TRUE, 'Terceira dose da Pentavalente', NULL),
-(14, 3, 2, '14 semanas', 3.5, 3, 5, 14, 30, 2, NULL, FALSE, TRUE, 'Segunda dose do VIP', NULL),
-(15, 9, 1, '14 semanas', 3.5, 3, 5, 14, 30, NULL, NULL, FALSE, TRUE, 'Primeira dose do Tétano', NULL),
+-- 4 meses.
+(9, 4, 2, '4 meses', 4, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(10, 5, 2, '4 meses', 4, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(11, 2, 2, '4 meses', 4, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(12, 6, 2, '4 meses', 4, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(13, 8, 1, '4 meses', 4, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
 
--- 9 meses
-(16, 4, 1, '9 meses', 9, 8, 11, 6, 30, NULL, NULL, FALSE, TRUE, 'Primeira dose contra o Sarampo', NULL),
-(17, 5, 1, '9 meses', 9, 8, 11, 6, 30, NULL, NULL, FALSE, TRUE, 'Primeira dose contra a Rubéola', NULL),
-(18, 6, 1, '9 meses', 9, 8, 11, 6, 30, NULL, NULL, FALSE, TRUE, 'Primeira dose contra as Caxumbas', NULL),
-(19, 12, 1, '9 meses', 9, 8, 11, 6, 30, NULL, NULL, FALSE, TRUE, 'Primeira dose da Febre Amarela', NULL),
+-- 5 meses.
+(14, 7, 2, '5 meses', 5, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
 
--- 12 meses
-(20, 13, 1, '12 meses', 12, 11, 14, 9, 30, NULL, NULL, FALSE, TRUE, 'Primeira dose do Rotavírus', NULL),
-(21, 14, 1, '12 meses', 12, 11, 14, 9, 30, NULL, NULL, FALSE, TRUE, 'Primeira dose do Pneumococo', NULL),
+-- 6 meses.
+(15, 4, 3, '6 meses', 6, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(16, 5, 3, '6 meses', 6, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(17, 2, 3, '6 meses', 6, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(18, 9, 1, '6 meses', 6, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
 
--- 15 meses
-(22, 4, 2, '15 meses', 15, 14, 18, 12, 30, 16, NULL, FALSE, TRUE, 'Segunda dose contra o Sarampo', NULL),
-(23, 5, 2, '15 meses', 15, 14, 18, 12, 30, 17, NULL, FALSE, TRUE, 'Segunda dose contra a Rubéola', NULL),
-(24, 6, 2, '15 meses', 15, 14, 18, 12, 30, 18, NULL, FALSE, TRUE, 'Segunda dose contra as Caxumbas', NULL),
-(25, 15, 1, '15 meses', 15, 14, 18, 12, 30, NULL, NULL, FALSE, TRUE, 'Primeira dose do Meningococo', NULL),
+-- 9 meses.
+(19, 10, 1, '9 meses', 9, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(20, 11, 1, '9 meses', 9, NULL, NULL, NULL, NULL, NULL, NULL, TRUE, TRUE, TRUE, 'Dose única segundo o cartão.', NULL),
+(21, 9, 2, '9 meses', 9, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
 
--- 18 meses - Pentavalente OU Tetravalente (grupo_alternativa)
-(26, 2, 4, '18 meses', 18, 17, 21, 15, 30, 13, 'pentavalente', FALSE, TRUE, 'Reforço da Pentavalente', NULL),
-(27, 16, 1, '18 meses', 18, 17, 21, 15, 30, NULL, 'tetravalente', FALSE, TRUE, 'Reforço da Tetravalente', NULL),
+-- 12 meses.
+(22, 12, 1, '12 meses', 12, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(23, 13, 1, '12 meses', 12, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
 
--- 24 meses
-(28, 9, 2, '24 meses', 24, 22, 26, 18, 180, 26, NULL, FALSE, TRUE, 'Segunda dose do Tétano', NULL),
+-- 15 meses.
+(24, 14, 1, '15 meses', 15, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(25, 7, 3, '15 meses', 15, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'No cartão aparece como Meningite conjugada quadrivalente (A, C, Y, W-135): confirmar que é a mesma vacina. Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
 
--- 4 anos
-(29, 3, 3, '4 anos', 48, 46, 50, 36, 365, 14, NULL, FALSE, TRUE, 'Terceira dose do VIP', NULL),
-(30, 4, 3, '4 anos', 48, 46, 50, 36, 180, 22, NULL, FALSE, TRUE, 'Terceira dose contra o Sarampo', NULL),
-(31, 5, 3, '4 anos', 48, 46, 50, 36, 180, 23, NULL, FALSE, TRUE, 'Terceira dose contra a Rubéola', NULL),
-(32, 6, 3, '4 anos', 48, 46, 50, 36, 180, 24, NULL, FALSE, TRUE, 'Terceira dose contra as Caxumbas', NULL),
+-- 18 meses: Pentavalente OU Tetravalente, duas linhas com o mesmo grupo.
+(26, 4, 4, '18 meses', 18, NULL, NULL, NULL, NULL, NULL, 'PENTA_OU_TETRA_18M', FALSE, TRUE, TRUE, 'Alternativa a escolher na hora: Pentavalente OU Tetravalente. Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(27, 15, 1, '18 meses', 18, NULL, NULL, NULL, NULL, NULL, 'PENTA_OU_TETRA_18M', FALSE, TRUE, TRUE, 'Alternativa a escolher na hora: Pentavalente OU Tetravalente. Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(28, 5, 4, '18 meses', 18, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(29, 2, 4, '18 meses', 18, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(30, 12, 2, '18 meses', 18, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
 
--- 6 anos
-(33, 15, 2, '6 anos', 72, 70, 74, 60, 365, 25, NULL, FALSE, TRUE, 'Segunda dose do Meningococo', NULL),
-(34, 17, 1, '9 anos feminino', 108, 106, 110, 84, 365, NULL, 'hpv_feminino', TRUE, TRUE, 'Primeira dose do HPV para meninas', NULL),
+-- 2 anos.
+(31, 16, 1, '2 anos', 24, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Reforço de 3 em 3 anos segundo o cartão: a validar. Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(32, 7, 4, '2 anos', 24, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
 
--- 9 anos (HPV para meninas)
-(35, 17, 2, '11 anos feminino', 132, 130, 134, 120, 365, 34, 'hpv_feminino', FALSE, TRUE, 'Segunda dose do HPV para meninas', NULL),
+-- 4 anos.
+(33, 13, 2, '4 anos', 48, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Reforço. Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
 
--- 15 anos
-(36, 18, 1, '15 anos', 180, 178, 182, 150, 30, NULL, NULL, FALSE, TRUE, 'Vacina contra a Varicela', NULL);
+-- 5-6 anos: o cartão indica o intervalo; 72 meses é interpretação a validar.
+(34, 4, 5, '5-6 anos', 60, 60, 72, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Fim da janela interpretado como 72 meses: a validar. Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+(35, 14, 2, '5-6 anos', 60, 60, 72, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Fim da janela interpretado como 72 meses: a validar. Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+
+-- 7 anos.
+(36, 17, 1, '7 anos', 84, NULL, NULL, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL),
+
+-- 10-12 anos: ideal no início do intervalo; 144 meses = 12 anos.
+(37, 18, 1, '10-12 anos', 120, 120, 144, NULL, NULL, NULL, NULL, FALSE, TRUE, TRUE, 'Fim da janela interpretado como 144 meses: a validar. Numeração da dose deduzida da ordem no cartão: a validar pela equipa clínica.', NULL);

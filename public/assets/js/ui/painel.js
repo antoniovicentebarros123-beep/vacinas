@@ -28,7 +28,19 @@ function itensMenu(perfil) {
 
 export async function desenharPainel(raiz, { bd, sessao, aoSair }) {
   const aplicacao = h('div', { classe: 'aplicacao', dados: { menu: 'fechado' } });
-  const alternarMenu = (aberto) => { aplicacao.dataset.menu = aberto ? 'aberto' : 'fechado'; };
+  const menuMobile = window.matchMedia('(max-width: 62rem)');
+  const alternarMenu = (aberto, restaurarFoco = true) => {
+    if (aberto && !menuMobile.matches) return;
+    aplicacao.dataset.menu = aberto ? 'aberto' : 'fechado';
+    botaoMenu.setAttribute('aria-expanded', String(aberto));
+    botaoMenu.setAttribute('aria-label', aberto ? 'Fechar navegação' : 'Abrir menu');
+    if (aberto) primeiroItemMenu?.focus();
+    else if (restaurarFoco) {
+      window.setTimeout(() => {
+        if (menuMobile.matches && aplicacao.dataset.menu === 'fechado') botaoMenu.focus();
+      }, 0);
+    }
+  };
 
   const menu = h('ul', { classe: 'menu' }, itensMenu(sessao.perfil).map((i) =>
     h('li', {}, i.rota
@@ -38,16 +50,22 @@ export async function desenharPainel(raiz, { bd, sessao, aoSair }) {
   const barra = h('aside', { classe: 'barra-lateral', id: 'barra', 'aria-label': 'Menu principal' },
     h('div', { classe: 'marca' },
       h('div', { classe: 'marca-selo', 'aria-hidden': 'true' }, icone('syringe')),
-      h('div', {}, h('div', { classe: 'marca-nome' }, 'Vacinação infantil'), h('div', { classe: 'marca-posto' }, sessao.postoNome ?? 'Posto'))),
+      h('div', {}, h('div', { classe: 'marca-nome' }, 'Vacinação infantil'), h('div', { classe: 'marca-posto' }, sessao.postoNome ?? '')),
+    ),
     h('nav', { 'aria-label': 'Secções' }, menu));
 
   const topo = h('header', { classe: 'topo' },
-    h('button', { type: 'button', classe: 'botao botao-secundario botao-icone botao-menu', 'aria-label': 'Abrir menu', 'aria-controls': 'barra', onclick: () => alternarMenu(true) }, icone('menu')),
+    h('button', { type: 'button', classe: 'botao botao-secundario botao-icone botao-menu', 'aria-label': 'Abrir menu', 'aria-controls': 'barra', 'aria-expanded': 'false' }, icone('menu')),
     h('div', { classe: 'topo-titulo' }, 'Painel'),
     criarIndicador(bd),
     h('div', { classe: 'topo-utilizador' },
       h('div', {}, sessao.nome, h('small', {}, ROTULOS_PERFIL[sessao.perfil] ?? sessao.perfil)),
-      h('button', { type: 'button', classe: 'botao botao-secundario botao-icone', 'aria-label': 'Terminar sessão', title: 'Terminar sessão', onclick: aoSair }, icone('log-out'))));
+      h('button', { type: 'button', classe: 'botao botao-secundario botao-icone', 'aria-label': 'Terminar sessão', title: 'Terminar sessão' }, icone('log-out'))));
+
+  const botaoMenu = topo.querySelector('.botao-menu');
+  const primeiroItemMenu = menu.querySelector('a');
+  botaoMenu.addEventListener('click', () => alternarMenu(aplicacao.dataset.menu !== 'aberto'));
+  topo.querySelector('[aria-label="Terminar sessão"]').addEventListener('click', aoSair);
 
   // Dados locais para os cartões de resumo
   const [criancas, pendentes] = await Promise.all([lerTodos(bd, 'criancas'), contarPendentes(bd)]);
@@ -79,9 +97,17 @@ export async function desenharPainel(raiz, { bd, sessao, aoSair }) {
       h('p', {}, 'Base de dados local, fila de envio e perfis. As crianças, a vacinação e o cálculo das doses chegam nas próximas fases.')));
 
   aplicacao.append(barra, h('div', { classe: 'coluna-principal' }, topo, conteudo));
-  // Fechar a gaveta com Escape e ao escolher um item
-  aplicacao.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') alternarMenu(false); });
-  aplicacao.addEventListener('click', (ev) => { if (ev.target === aplicacao || ev.target.closest?.('.menu a')) alternarMenu(false); });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && menuMobile.matches && aplicacao.dataset.menu === 'aberto') alternarMenu(false);
+  });
+  document.addEventListener('click', (ev) => {
+    if (aplicacao.dataset.menu !== 'aberto' || !(ev.target instanceof Element)) return;
+    if (ev.target.closest('.botao-menu')) return;
+    if (ev.target.closest('.menu a, .menu .item-menu') || !ev.target.closest('.barra-lateral')) alternarMenu(false);
+  });
+  menuMobile.addEventListener?.('change', (ev) => {
+    if (!ev.matches && aplicacao.dataset.menu === 'aberto') alternarMenu(false, false);
+  });
 
   raiz.replaceChildren(aplicacao);
 }

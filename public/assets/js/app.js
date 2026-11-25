@@ -7,6 +7,13 @@ import { h } from './ui/dom.js';
 
 const raiz = document.getElementById('app');
 
+/** Lê o nome da instituição da store local alimentada por configuracoes.nome_posto. */
+async function nomeInstituicao(bd) {
+  const registo = await transacao(bd, ['configuracoes'], 'readonly', (tx) =>
+    pedido(tx.objectStore('configuracoes').get('nome_posto')));
+  return typeof registo?.valor === 'string' ? registo.valor : '';
+}
+
 /** Pede que o navegador não apague os dados locais (a fila de envio vive aqui). */
 async function pedirArmazenamentoPersistente(bd) {
   try {
@@ -25,19 +32,20 @@ async function sessaoDePrevia(bd) {
   if (!local || !new URLSearchParams(location.search).has('previa')) return;
   await guardarSessao(bd, {
     utilizadorId: '0'.repeat(26), nome: 'Maria Previa', perfil: 'enfermeiro',
-    postoId: '01FXTRP0000000000000000001', postoNome: 'Centro Médico Hospitalar Maria de Fátima',
+    postoId: '01FXTRP0000000000000000001', postoNome: await nomeInstituicao(bd),
     dispositivoId: '0'.repeat(25) + '1', dispositivoCodigo: 'PC01',
   });
 }
 
 async function mostrar(bd) {
   const sessao = await lerSessao(bd);
+  const instituicao = await nomeInstituicao(bd);
   if (!sessao) {
-    desenharLogin(raiz, { aoEntrar: async () => { /* Fase 1b: guarda a sessão e o verificador offline */ await mostrar(bd); } });
+    desenharLogin(raiz, { nomeInstituicao: instituicao, aoEntrar: async () => { /* Fase 1b: guarda a sessão e o verificador offline */ await mostrar(bd); } });
     return;
   }
   await desenharPainel(raiz, {
-    bd, sessao,
+    bd, sessao: { ...sessao, postoNome: instituicao },
     aoSair: async () => { await terminarSessao(bd); await mostrar(bd); },
   });
   pedirArmazenamentoPersistente(bd);

@@ -44,10 +44,11 @@ FLUSH PRIVILEGES;
 ```
 
 ## Configuração
-- Editar `config/config.local.php` fora do Git com:
-  - `modo_previa` = true para desenvolvimento
-  - `nome_posto` = "Posto de Saúde do Bairro do Rangel"
-  - `prefixo_processo` = "RG"
+- Editar `config/config.local.php` fora do Git com as credenciais e os parâmetros locais.
+- O nome da instituição é lido exclusivamente de `configuracoes.nome_posto`. Para o nome atual, executar `database/update_nome_hospital.sql` com `--default-character-set=utf8mb4`.
+- Os tempos de sessão são configuráveis por `configuracoes.session_lifetime` (30 minutos por defeito) e `configuracoes.session_remember_lifetime` (7 dias por defeito). Em bases existentes, aplicar `database/update_sessao.sql`.
+- `modo_previa` = true apenas para desenvolvimento.
+- `prefixo_processo` = "RG".
 
 ## Notas
 - Não remover `CREATE DATABASE` do schema.sql para importação pelo phpMyAdmin

@@ -1,0 +1,16 @@
+/* Faixa de pré-visualização */
+.faixa-preview {
+    background: #ff6b6b;
+    color: white;
+    text-align: center;
+    padding: 4px 0;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 2px solid #e63946;
+}
+

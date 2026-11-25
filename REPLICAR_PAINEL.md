@@ -14,8 +14,8 @@
 - Dados de saúde de crianças são sensíveis: nunca em logs, nunca segredos no repositório. Não cries ficheiros tipo "pasted-text.txt".
 
 ## 1. O projeto
-Tema (não alterar): "DESENVOLVIMENTO DE UM SISTEMA WEB PARA A GESTÃO DO REGISTO DE CRIANÇAS E CONTROLO DA VACINAÇÃO INFANTIL NO POSTO DE SAÚDE DO BAIRRO DO RANGEL".
-O nome oficial do posto ainda não está confirmado: fica em configuracoes (chave nome_posto), valor provisório "Posto de Saúde do Bairro do Rangel".
+Tema (não alterar): "DESENVOLVIMENTO DE UM SISTEMA WEB PARA A GESTÃO DO REGISTO DE CRIANÇAS E CONTROLO DA VACINAÇÃO INFANTIL NO CENTRO MÉDICO HOSPITALAR MARIA DE FÁTIMA".
+O nome oficial da instituição fica em configuracoes (chave nome_posto): "Centro Médico Hospitalar Maria de Fátima".
 Fora do âmbito: pagamentos e faturação (há vacinas gratuitas e pagas, não se tratam), agregado familiar, agentes comunitários, funcionamento offline e sincronização, gráficos de crescimento.
 Prazo: 1.ª pré-defesa a 30/11/2026 (hoje 23/11). ER até 28/11. Prioridade: schema, pré-visualização de login e painel, requisitos e casos de uso, diagramas, guião.
 
